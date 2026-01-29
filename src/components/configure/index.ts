@@ -4,3 +4,4 @@ export { ParameterEditor } from './ParameterEditor';
 export { SafetyConfig } from './SafetyConfig';
 export { RadioCalibration } from './RadioCalibration';
 export { FlightModesConfig } from './FlightModesConfig';
+export { FirmwareUpdate } from './FirmwareUpdate';

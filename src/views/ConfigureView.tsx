@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Theme } from '@/types';
-import { CalibrationWizard, MotorTest, ParameterEditor, SafetyConfig, RadioCalibration, FlightModesConfig } from '@/components/configure';
+import { CalibrationWizard, MotorTest, ParameterEditor, SafetyConfig, RadioCalibration, FlightModesConfig, FirmwareUpdate } from '@/components/configure';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 
 interface ConfigureViewProps {
@@ -16,6 +16,7 @@ type ConfigSection =
   | 'safety'
   | 'power'
   | 'motors'
+  | 'firmware'
   | 'parameters';
 
 type CalibrationSensor = 'compass' | 'accel' | 'gyro' | 'level' | 'radio' | 'esc';
@@ -29,6 +30,7 @@ const sections: { id: ConfigSection; label: string; icon: string }[] = [
   { id: 'safety', label: 'Safety', icon: '🛡️' },
   { id: 'power', label: 'Power', icon: '🔋' },
   { id: 'motors', label: 'Motors', icon: '🔄' },
+  { id: 'firmware', label: 'Firmware', icon: '💾' },
   { id: 'parameters', label: 'Parameters', icon: '⚙️' },
 ];
 
@@ -422,6 +424,7 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
       case 'safety': return <SafetyConfig theme={theme} />;
       case 'power': return renderPower();
       case 'motors': return <MotorTest theme={theme} vehicleType="quad" />;
+      case 'firmware': return <FirmwareUpdate theme={theme} />;
       case 'parameters': return <ParameterEditor theme={theme} />;
     }
   };
