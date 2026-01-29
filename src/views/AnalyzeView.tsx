@@ -1,5 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { Theme } from '@/types';
+import { GraphBuilder } from '@/components/analyze';
+
+type AnalyzeTab = 'replay' | 'graphs' | '3d';
 
 interface AnalyzeViewProps {
   theme: Theme;
@@ -59,6 +62,7 @@ export function AnalyzeView({ theme }: AnalyzeViewProps) {
   const [playbackPosition, setPlaybackPosition] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [activeTab, setActiveTab] = useState<AnalyzeTab>('replay');
   const animationRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
 
@@ -290,6 +294,41 @@ export function AnalyzeView({ theme }: AnalyzeViewProps) {
       <div className="flex-1 flex flex-col overflow-hidden">
         {selectedFlight ? (
           <>
+            {/* Tab Navigation */}
+            <div className="flex border-b" style={{ borderColor: colors.border }}>
+              {([
+                { id: 'replay' as AnalyzeTab, label: 'Flight Replay', icon: '▶️' },
+                { id: 'graphs' as AnalyzeTab, label: 'Graph Builder', icon: '📈' },
+                { id: '3d' as AnalyzeTab, label: '3D View', icon: '🌐' },
+              ]).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+                  style={{
+                    borderColor: activeTab === tab.id ? colors.accent : 'transparent',
+                    color: activeTab === tab.id ? colors.textPrimary : colors.text,
+                    backgroundColor: activeTab === tab.id ? colors.accent + '10' : 'transparent',
+                  }}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'graphs' ? (
+              <GraphBuilder theme={theme} flightDuration={2478} />
+            ) : activeTab === '3d' ? (
+              <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: colors.hover }}>
+                <div className="text-center">
+                  <div className="text-6xl mb-4 opacity-30">🌐</div>
+                  <p style={{ color: colors.text }}>3D Flight Path Visualization</p>
+                  <p className="text-sm mt-2" style={{ color: colors.text }}>Coming soon...</p>
+                </div>
+              </div>
+            ) : (
+            <>
             {/* Flight Summary */}
             <div className="p-4 border-b" style={{ borderColor: colors.border }}>
               <div className="flex items-center justify-between">
@@ -519,6 +558,8 @@ export function AnalyzeView({ theme }: AnalyzeViewProps) {
                 </div>
               </div>
             </div>
+            </>
+            )}
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">

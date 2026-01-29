@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Theme } from '@/types';
-import { CalibrationWizard, MotorTest } from '@/components/configure';
+import { CalibrationWizard, MotorTest, ParameterEditor, SafetyConfig } from '@/components/configure';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 
 interface ConfigureViewProps {
@@ -41,20 +41,6 @@ const sensorStatus = [
   { name: 'Airspeed', status: 'ok', value: 'Enabled' },
 ];
 
-const parameters = [
-  { name: 'ARMING_CHECK', value: 1, description: 'Arming checks to perform', group: 'Arming' },
-  { name: 'ARMING_REQUIRE', value: 1, description: 'Require arm gesture', group: 'Arming' },
-  { name: 'BATT_ARM_VOLT', value: 10.5, description: 'Minimum arm voltage', group: 'Battery' },
-  { name: 'BATT_CAPACITY', value: 5000, description: 'Battery capacity mAh', group: 'Battery' },
-  { name: 'BATT_LOW_VOLT', value: 10.0, description: 'Low battery voltage', group: 'Battery' },
-  { name: 'FS_THR_ENABLE', value: 1, description: 'Throttle failsafe', group: 'Failsafe' },
-  { name: 'FS_THR_VALUE', value: 975, description: 'Throttle failsafe PWM', group: 'Failsafe' },
-  { name: 'RTL_ALT', value: 60, description: 'RTL altitude (m)', group: 'RTL' },
-  { name: 'RTL_SPEED', value: 0, description: 'RTL speed (0=auto)', group: 'RTL' },
-  { name: 'WP_RADIUS', value: 5, description: 'Waypoint radius (m)', group: 'Navigation' },
-  { name: 'WP_SPEED', value: 12, description: 'Waypoint speed (m/s)', group: 'Navigation' },
-];
-
 const flightModes = [
   { channel: 1, low: 'MANUAL', mid: 'FBWA', high: 'AUTO' },
   { channel: 2, low: 'RTL', mid: 'LOITER', high: 'GUIDED' },
@@ -62,8 +48,6 @@ const flightModes = [
 
 export function ConfigureView({ theme }: ConfigureViewProps) {
   const [activeSection, setActiveSection] = useState<ConfigSection>('summary');
-  const [paramSearch, setParamSearch] = useState('');
-  const [editingParam, setEditingParam] = useState<string | null>(null);
   const [calibrationSensor, setCalibrationSensor] = useState<CalibrationSensor | null>(null);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
@@ -95,12 +79,6 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
             error: '#dc2626',
           },
     [theme]
-  );
-
-  const filteredParams = parameters.filter(
-    (p) =>
-      p.name.toLowerCase().includes(paramSearch.toLowerCase()) ||
-      p.description.toLowerCase().includes(paramSearch.toLowerCase())
   );
 
   const renderSummary = () => (
@@ -301,125 +279,6 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
               </div>
             </div>
           ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderParameters = () => (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder="Search parameters..."
-          value={paramSearch}
-          onChange={(e) => setParamSearch(e.target.value)}
-          className="flex-1 px-4 py-2 rounded-lg text-sm"
-          style={{ backgroundColor: colors.panel, color: colors.textPrimary, border: `1px solid ${colors.border}` }}
-        />
-        <button className="px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: colors.accent, color: '#000' }}>
-          Write Changes
-        </button>
-      </div>
-
-      <div className="rounded-lg border overflow-hidden" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
-        <table className="w-full">
-          <thead>
-            <tr style={{ backgroundColor: colors.hover }}>
-              <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: colors.text }}>Parameter</th>
-              <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: colors.text }}>Value</th>
-              <th className="text-left px-4 py-3 text-xs uppercase" style={{ color: colors.text }}>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredParams.map((param) => (
-              <tr key={param.name} className="border-t" style={{ borderColor: colors.border }}>
-                <td className="px-4 py-3">
-                  <div className="font-mono text-sm" style={{ color: colors.accent }}>{param.name}</div>
-                  <div className="text-xs" style={{ color: colors.text }}>{param.group}</div>
-                </td>
-                <td className="px-4 py-3">
-                  {editingParam === param.name ? (
-                    <input
-                      type="number"
-                      defaultValue={param.value}
-                      className="w-24 px-2 py-1 rounded text-sm"
-                      style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.accent}` }}
-                      onBlur={() => setEditingParam(null)}
-                      onKeyDown={(e) => e.key === 'Enter' && setEditingParam(null)}
-                      autoFocus
-                    />
-                  ) : (
-                    <span
-                      className="cursor-pointer px-2 py-1 rounded"
-                      style={{ color: colors.textPrimary }}
-                      onClick={() => setEditingParam(param.name)}
-                    >
-                      {param.value}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm" style={{ color: colors.text }}>{param.description}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  const renderSafety = () => (
-    <div className="space-y-4">
-      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
-        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Failsafe Settings</h3>
-        <div className="space-y-4">
-          {[
-            { name: 'Low Battery', value: 'Return to Launch', enabled: true },
-            { name: 'RC Loss', value: 'Continue Mission', enabled: true },
-            { name: 'GPS Loss', value: 'Land', enabled: true },
-            { name: 'Geofence Breach', value: 'Return to Launch', enabled: true },
-          ].map((fs) => (
-            <div key={fs.name} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: colors.hover }}>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" defaultChecked={fs.enabled} className="w-4 h-4" />
-                <span style={{ color: colors.textPrimary }}>{fs.name}</span>
-              </div>
-              <select
-                className="px-3 py-2 rounded text-sm"
-                style={{ backgroundColor: colors.panel, color: colors.textPrimary, border: `1px solid ${colors.border}` }}
-                defaultValue={fs.value}
-              >
-                <option>Return to Launch</option>
-                <option>Land</option>
-                <option>Continue Mission</option>
-                <option>Loiter</option>
-              </select>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
-        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>RTL Settings</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>RTL Altitude (m)</label>
-            <input
-              type="number"
-              defaultValue={60}
-              className="w-full px-3 py-2 rounded text-sm"
-              style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}
-            />
-          </div>
-          <div>
-            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>RTL Speed (m/s)</label>
-            <input
-              type="number"
-              defaultValue={0}
-              className="w-full px-3 py-2 rounded text-sm"
-              style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}
-            />
-          </div>
         </div>
       </div>
     </div>
@@ -672,10 +531,10 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
       case 'sensors': return renderSensors();
       case 'radio': return renderRadio();
       case 'flight-modes': return renderFlightModes();
-      case 'safety': return renderSafety();
+      case 'safety': return <SafetyConfig theme={theme} />;
       case 'power': return renderPower();
       case 'motors': return <MotorTest theme={theme} vehicleType="quad" />;
-      case 'parameters': return renderParameters();
+      case 'parameters': return <ParameterEditor theme={theme} />;
     }
   };
 

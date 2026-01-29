@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react';
 import type { Theme } from '@/types';
 import { useUnitStore, type UnitSystem, type SpeedUnit, type AltitudeUnit, type DistanceUnit, type TemperatureUnit } from '@/stores/useUnitStore';
+import { useAccessibilityStore } from '@/stores/useAccessibilityStore';
 
 interface SettingsViewProps {
   theme: Theme;
   onThemeChange?: (theme: Theme) => void;
 }
 
-type SettingsSection = 'general' | 'map' | 'telemetry' | 'connections' | 'notifications' | 'shortcuts' | 'about';
+type SettingsSection = 'general' | 'map' | 'telemetry' | 'connections' | 'notifications' | 'accessibility' | 'shortcuts' | 'about';
 
 interface SettingsState {
   // General
@@ -38,6 +39,7 @@ const sections: { id: SettingsSection; label: string; icon: string }[] = [
   { id: 'telemetry', label: 'Telemetry', icon: '📊' },
   { id: 'connections', label: 'Connections', icon: '📡' },
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
+  { id: 'accessibility', label: 'Accessibility', icon: '♿' },
   { id: 'shortcuts', label: 'Keyboard', icon: '⌨️' },
   { id: 'about', label: 'About', icon: 'ℹ️' },
 ];
@@ -59,6 +61,7 @@ const shortcuts = [
 export function SettingsView({ theme, onThemeChange }: SettingsViewProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>('general');
   const { unitSystem, preferences, setUnitSystem, setSpeedUnit, setAltitudeUnit, setDistanceUnit, setTemperatureUnit } = useUnitStore();
+  const { highContrast, reducedMotion, largeText, setHighContrast, setReducedMotion, setLargeText } = useAccessibilityStore();
   const [settings, setSettings] = useState<SettingsState>({
     theme,
     language: 'en',
@@ -485,6 +488,105 @@ export function SettingsView({ theme, onThemeChange }: SettingsViewProps) {
     </div>
   );
 
+  const renderAccessibility = () => (
+    <div className="space-y-6">
+      {/* High Contrast */}
+      <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: colors.hover }}>
+        <div>
+          <span className="font-medium" style={{ color: colors.textPrimary }}>High Contrast Mode</span>
+          <p className="text-xs mt-1" style={{ color: colors.text }}>
+            Increase contrast for better visibility
+          </p>
+        </div>
+        <button
+          onClick={() => setHighContrast(!highContrast)}
+          className="relative w-12 h-6 rounded-full transition-colors"
+          style={{ backgroundColor: highContrast ? colors.accent : colors.border }}
+        >
+          <span
+            className="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform"
+            style={{ left: highContrast ? '26px' : '4px' }}
+          />
+        </button>
+      </div>
+
+      {/* Reduced Motion */}
+      <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: colors.hover }}>
+        <div>
+          <span className="font-medium" style={{ color: colors.textPrimary }}>Reduce Motion</span>
+          <p className="text-xs mt-1" style={{ color: colors.text }}>
+            Minimize animations and transitions
+          </p>
+        </div>
+        <button
+          onClick={() => setReducedMotion(!reducedMotion)}
+          className="relative w-12 h-6 rounded-full transition-colors"
+          style={{ backgroundColor: reducedMotion ? colors.accent : colors.border }}
+        >
+          <span
+            className="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform"
+            style={{ left: reducedMotion ? '26px' : '4px' }}
+          />
+        </button>
+      </div>
+
+      {/* Large Text */}
+      <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: colors.hover }}>
+        <div>
+          <span className="font-medium" style={{ color: colors.textPrimary }}>Large Text</span>
+          <p className="text-xs mt-1" style={{ color: colors.text }}>
+            Increase font sizes throughout the app
+          </p>
+        </div>
+        <button
+          onClick={() => setLargeText(!largeText)}
+          className="relative w-12 h-6 rounded-full transition-colors"
+          style={{ backgroundColor: largeText ? colors.accent : colors.border }}
+        >
+          <span
+            className="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform"
+            style={{ left: largeText ? '26px' : '4px' }}
+          />
+        </button>
+      </div>
+
+      {/* Preview */}
+      <div className="p-4 rounded-lg" style={{ backgroundColor: colors.hover }}>
+        <h4 className="font-medium mb-3" style={{ color: colors.textPrimary }}>Preview</h4>
+        <div
+          className="p-4 rounded"
+          style={{
+            backgroundColor: highContrast ? (theme === 'dark' ? '#000000' : '#ffffff') : colors.panel,
+            border: highContrast ? '2px solid ' + (theme === 'dark' ? '#ffffff' : '#000000') : `1px solid ${colors.border}`,
+          }}
+        >
+          <p
+            className={largeText ? 'text-lg' : 'text-sm'}
+            style={{
+              color: highContrast ? (theme === 'dark' ? '#ffffff' : '#000000') : colors.textPrimary,
+            }}
+          >
+            Sample text with current accessibility settings
+          </p>
+          <button
+            className={`mt-2 px-4 py-2 rounded font-medium ${largeText ? 'text-base' : 'text-sm'}`}
+            style={{
+              backgroundColor: highContrast ? (theme === 'dark' ? '#00ffff' : '#0000ff') : colors.accent,
+              color: highContrast ? '#000000' : '#000000',
+            }}
+          >
+            Sample Button
+          </button>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="p-3 rounded-lg text-sm" style={{ backgroundColor: colors.accent + '10', color: colors.accent }}>
+        Changes will apply immediately. Some settings may require a page refresh to fully take effect.
+      </div>
+    </div>
+  );
+
   const renderAbout = () => (
     <div className="space-y-6">
       {/* Logo / Title */}
@@ -547,6 +649,7 @@ export function SettingsView({ theme, onThemeChange }: SettingsViewProps) {
       case 'telemetry': return renderTelemetry();
       case 'connections': return renderConnections();
       case 'notifications': return renderNotifications();
+      case 'accessibility': return renderAccessibility();
       case 'shortcuts': return renderShortcuts();
       case 'about': return renderAbout();
     }
