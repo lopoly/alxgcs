@@ -164,6 +164,40 @@ export function PlanView({ theme }: PlanViewProps) {
   const waypointsWithCoords = missionItems.filter((item) => item.lat && item.lng);
   const pathCoordinates: [number, number][] = waypointsWithCoords.map((wp) => [wp.lat!, wp.lng!]);
 
+  // Calculate mission statistics
+  const missionStats = useMemo(() => {
+    // Haversine distance calculation
+    const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const R = 6371; // Earth's radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    let totalDistance = 0;
+    for (let i = 1; i < waypointsWithCoords.length; i++) {
+      const prev = waypointsWithCoords[i - 1];
+      const curr = waypointsWithCoords[i];
+      totalDistance += haversineDistance(prev.lat!, prev.lng!, curr.lat!, curr.lng!);
+    }
+
+    const maxAltitude = Math.max(...missionItems.map(item => item.altitude));
+    const avgSpeed = 12; // m/s assumption for fixed-wing
+    const estTimeSeconds = (totalDistance * 1000) / avgSpeed;
+    const estMinutes = Math.floor(estTimeSeconds / 60);
+    const estSeconds = Math.floor(estTimeSeconds % 60);
+
+    return {
+      distance: totalDistance.toFixed(1),
+      time: `${estMinutes}:${estSeconds.toString().padStart(2, '0')}`,
+      maxAlt: maxAltitude,
+    };
+  }, [missionItems, waypointsWithCoords]);
+
   const handleMapClick = (lat: number, lng: number) => {
     if (editMode === 'waypoint') {
       const newId = Math.max(...missionItems.map((m) => m.id)) + 1;
@@ -518,15 +552,15 @@ export function PlanView({ theme }: PlanViewProps) {
         >
           <div>
             <div style={{ color: colors.text, fontSize: '10px' }}>DISTANCE</div>
-            <div style={{ color: colors.textPrimary, fontSize: '14px', fontWeight: 600 }}>3.2 km</div>
+            <div style={{ color: colors.textPrimary, fontSize: '14px', fontWeight: 600 }}>{missionStats.distance} km</div>
           </div>
           <div>
             <div style={{ color: colors.text, fontSize: '10px' }}>EST. TIME</div>
-            <div style={{ color: colors.textPrimary, fontSize: '14px', fontWeight: 600 }}>8:30</div>
+            <div style={{ color: colors.textPrimary, fontSize: '14px', fontWeight: 600 }}>{missionStats.time}</div>
           </div>
           <div>
             <div style={{ color: colors.text, fontSize: '10px' }}>MAX ALT</div>
-            <div style={{ color: colors.textPrimary, fontSize: '14px', fontWeight: 600 }}>100 m</div>
+            <div style={{ color: colors.textPrimary, fontSize: '14px', fontWeight: 600 }}>{missionStats.maxAlt} m</div>
           </div>
         </div>
       </div>

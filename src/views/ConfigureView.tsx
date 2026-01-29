@@ -423,22 +423,256 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
     </div>
   );
 
+  const renderAirframe = () => (
+    <div className="space-y-4">
+      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
+        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Airframe Selection</h3>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { id: 'flying-wing', name: 'Flying Wing', icon: '🦅', selected: true },
+            { id: 'standard-plane', name: 'Standard Plane', icon: '✈️', selected: false },
+            { id: 'vtol', name: 'VTOL', icon: '🚁', selected: false },
+            { id: 'quadplane', name: 'QuadPlane', icon: '🛩️', selected: false },
+            { id: 'tailsitter', name: 'Tailsitter', icon: '🚀', selected: false },
+            { id: 'custom', name: 'Custom', icon: '⚙️', selected: false },
+          ].map((frame) => (
+            <div
+              key={frame.id}
+              className="p-4 rounded-lg cursor-pointer transition-all"
+              style={{
+                backgroundColor: frame.selected ? colors.accent + '20' : colors.hover,
+                border: `2px solid ${frame.selected ? colors.accent : 'transparent'}`,
+              }}
+            >
+              <div className="text-3xl mb-2">{frame.icon}</div>
+              <div className="font-medium text-sm" style={{ color: colors.textPrimary }}>{frame.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
+        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Control Surfaces</h3>
+        <div className="space-y-3">
+          {[
+            { channel: 1, function: 'Aileron', reversed: false },
+            { channel: 2, function: 'Elevator', reversed: false },
+            { channel: 3, function: 'Throttle', reversed: false },
+            { channel: 4, function: 'Rudder', reversed: true },
+          ].map((surface) => (
+            <div key={surface.channel} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: colors.hover }}>
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium" style={{ backgroundColor: colors.accent + '20', color: colors.accent }}>
+                  {surface.channel}
+                </span>
+                <select
+                  className="px-3 py-2 rounded text-sm"
+                  style={{ backgroundColor: colors.panel, color: colors.textPrimary, border: `1px solid ${colors.border}` }}
+                  defaultValue={surface.function}
+                >
+                  <option>Aileron</option>
+                  <option>Elevator</option>
+                  <option>Throttle</option>
+                  <option>Rudder</option>
+                  <option>Flap</option>
+                  <option>None</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" defaultChecked={surface.reversed} className="w-4 h-4" />
+                <span className="text-sm" style={{ color: colors.text }}>Reversed</span>
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
+        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Motor Configuration</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>Motor PWM Min</label>
+            <input type="number" defaultValue={1000} className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }} />
+          </div>
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>Motor PWM Max</label>
+            <input type="number" defaultValue={2000} className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRadio = () => (
+    <div className="space-y-4">
+      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
+        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>RC Channel Monitor</h3>
+        <div className="space-y-3">
+          {[
+            { channel: 1, name: 'Roll', min: 1100, max: 1900, value: 1500 },
+            { channel: 2, name: 'Pitch', min: 1100, max: 1900, value: 1520 },
+            { channel: 3, name: 'Throttle', min: 1100, max: 1900, value: 1100 },
+            { channel: 4, name: 'Yaw', min: 1100, max: 1900, value: 1500 },
+            { channel: 5, name: 'Mode', min: 1100, max: 1900, value: 1500 },
+            { channel: 6, name: 'Aux 1', min: 1100, max: 1900, value: 1500 },
+          ].map((ch) => (
+            <div key={ch.channel} className="p-3 rounded-lg" style={{ backgroundColor: colors.hover }}>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>CH{ch.channel}: {ch.name}</span>
+                <span className="text-sm font-mono" style={{ color: colors.accent }}>{ch.value}</span>
+              </div>
+              <div className="relative h-2 rounded-full" style={{ backgroundColor: colors.border }}>
+                <div
+                  className="absolute h-full rounded-full"
+                  style={{
+                    backgroundColor: colors.accent,
+                    left: '0%',
+                    width: `${((ch.value - ch.min) / (ch.max - ch.min)) * 100}%`,
+                  }}
+                />
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
+                  style={{
+                    backgroundColor: colors.textPrimary,
+                    left: `${((ch.value - ch.min) / (ch.max - ch.min)) * 100}%`,
+                    transform: 'translateX(-50%) translateY(-50%)',
+                  }}
+                />
+              </div>
+              <div className="flex justify-between mt-1 text-xs" style={{ color: colors.text }}>
+                <span>{ch.min}</span>
+                <span>{ch.max}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
+        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Transmitter Setup</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>RC Protocol</label>
+            <select className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}>
+              <option>SBUS</option>
+              <option>PPM</option>
+              <option>CRSF (Crossfire)</option>
+              <option>DSM2/DSMX</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>RSSI Channel</label>
+            <select className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}>
+              <option>Disabled</option>
+              <option>Channel 8</option>
+              <option>Channel 9</option>
+              <option>Channel 10</option>
+            </select>
+          </div>
+        </div>
+        <button
+          className="mt-4 w-full px-4 py-3 rounded-lg text-sm font-medium"
+          style={{ backgroundColor: colors.accent + '20', color: colors.accent }}
+        >
+          Start RC Calibration
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderPower = () => (
+    <div className="space-y-4">
+      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
+        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Battery Settings</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>Cell Count</label>
+            <select className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}>
+              <option>3S (11.1V)</option>
+              <option>4S (14.8V)</option>
+              <option>5S (18.5V)</option>
+              <option>6S (22.2V)</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>Capacity (mAh)</label>
+            <input type="number" defaultValue={5000} className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }} />
+          </div>
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>Low Voltage (V)</label>
+            <input type="number" defaultValue={10.5} step={0.1} className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }} />
+          </div>
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>Critical Voltage (V)</label>
+            <input type="number" defaultValue={10.0} step={0.1} className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
+        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Power Monitor</h3>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="p-3 rounded-lg text-center" style={{ backgroundColor: colors.hover }}>
+            <div className="text-2xl font-bold" style={{ color: colors.success }}>12.4V</div>
+            <div className="text-xs mt-1" style={{ color: colors.text }}>Voltage</div>
+          </div>
+          <div className="p-3 rounded-lg text-center" style={{ backgroundColor: colors.hover }}>
+            <div className="text-2xl font-bold" style={{ color: colors.accent }}>8.2A</div>
+            <div className="text-xs mt-1" style={{ color: colors.text }}>Current</div>
+          </div>
+          <div className="p-3 rounded-lg text-center" style={{ backgroundColor: colors.hover }}>
+            <div className="text-2xl font-bold" style={{ color: colors.warning }}>1250</div>
+            <div className="text-xs mt-1" style={{ color: colors.text }}>mAh Used</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>Voltage Multiplier</label>
+            <input type="number" defaultValue={10.1} step={0.01} className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }} />
+          </div>
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>Amps per Volt</label>
+            <input type="number" defaultValue={17.0} step={0.1} className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
+        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>ESC Settings</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>ESC Protocol</label>
+            <select className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}>
+              <option>Standard PWM</option>
+              <option>OneShot125</option>
+              <option>OneShot42</option>
+              <option>DShot150</option>
+              <option>DShot300</option>
+              <option>DShot600</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>Motor Spin When Armed</label>
+            <select className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeSection) {
       case 'summary': return renderSummary();
+      case 'airframe': return renderAirframe();
       case 'sensors': return renderSensors();
+      case 'radio': return renderRadio();
       case 'flight-modes': return renderFlightModes();
-      case 'parameters': return renderParameters();
       case 'safety': return renderSafety();
-      default:
-        return (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="text-4xl mb-2">🚧</div>
-              <p style={{ color: colors.text }}>Section under development</p>
-            </div>
-          </div>
-        );
+      case 'power': return renderPower();
+      case 'parameters': return renderParameters();
     }
   };
 

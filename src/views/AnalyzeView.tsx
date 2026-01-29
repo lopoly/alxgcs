@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import type { Theme } from '@/types';
 
 interface AnalyzeViewProps {
@@ -56,8 +56,51 @@ const mockEvents: FlightEvent[] = [
 export function AnalyzeView({ theme }: AnalyzeViewProps) {
   const [selectedLog, setSelectedLog] = useState<string | null>('1');
   const [activeGraphs, setActiveGraphs] = useState<string[]>(['altitude', 'speed']);
-  const [playbackPosition, setPlaybackPosition] = useState(65);
+  const [playbackPosition, setPlaybackPosition] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const animationRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
+
+  // Handle playback animation
+  useEffect(() => {
+    if (isPlaying) {
+      const animate = (currentTime: number) => {
+        if (lastTimeRef.current === 0) {
+          lastTimeRef.current = currentTime;
+        }
+        const deltaTime = currentTime - lastTimeRef.current;
+        lastTimeRef.current = currentTime;
+
+        // Progress 1% per 500ms at 1x speed (full playback in ~50 seconds)
+        const progress = (deltaTime / 500) * playbackSpeed;
+
+        setPlaybackPosition((prev) => {
+          const newPos = prev + progress;
+          if (newPos >= 100) {
+            setIsPlaying(false);
+            return 100;
+          }
+          return newPos;
+        });
+
+        animationRef.current = requestAnimationFrame(animate);
+      };
+
+      animationRef.current = requestAnimationFrame(animate);
+    } else {
+      lastTimeRef.current = 0;
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    }
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isPlaying, playbackSpeed]);
 
   const colors = useMemo(
     () =>
@@ -400,13 +443,47 @@ export function AnalyzeView({ theme }: AnalyzeViewProps) {
             {/* Playback Controls */}
             <div className="p-4 border-t" style={{ borderColor: colors.border }}>
               <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: colors.accent, color: '#000' }}
-                >
-                  {isPlaying ? '⏸' : '▶'}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => { setPlaybackPosition(0); setIsPlaying(false); }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                    style={{ backgroundColor: colors.hover, color: colors.text }}
+                    title="Reset"
+                  >
+                    ⏮
+                  </button>
+                  <button
+                    onClick={() => setPlaybackPosition(Math.max(0, playbackPosition - 5))}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                    style={{ backgroundColor: colors.hover, color: colors.text }}
+                    title="Back 5%"
+                  >
+                    ⏪
+                  </button>
+                  <button
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: colors.accent, color: '#000' }}
+                  >
+                    {isPlaying ? '⏸' : '▶'}
+                  </button>
+                  <button
+                    onClick={() => setPlaybackPosition(Math.min(100, playbackPosition + 5))}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                    style={{ backgroundColor: colors.hover, color: colors.text }}
+                    title="Forward 5%"
+                  >
+                    ⏩
+                  </button>
+                  <button
+                    onClick={() => { setPlaybackPosition(100); setIsPlaying(false); }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                    style={{ backgroundColor: colors.hover, color: colors.text }}
+                    title="End"
+                  >
+                    ⏭
+                  </button>
+                </div>
                 <div className="flex-1">
                   <input
                     type="range"
@@ -426,24 +503,19 @@ export function AnalyzeView({ theme }: AnalyzeViewProps) {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <button
-                    className="px-2 py-1 rounded text-xs"
-                    style={{ backgroundColor: colors.hover, color: colors.text }}
-                  >
-                    0.5x
-                  </button>
-                  <button
-                    className="px-2 py-1 rounded text-xs"
-                    style={{ backgroundColor: colors.accent + '20', color: colors.accent }}
-                  >
-                    1x
-                  </button>
-                  <button
-                    className="px-2 py-1 rounded text-xs"
-                    style={{ backgroundColor: colors.hover, color: colors.text }}
-                  >
-                    2x
-                  </button>
+                  {[0.5, 1, 2, 4].map((speed) => (
+                    <button
+                      key={speed}
+                      onClick={() => setPlaybackSpeed(speed)}
+                      className="px-2 py-1 rounded text-xs"
+                      style={{
+                        backgroundColor: playbackSpeed === speed ? colors.accent + '20' : colors.hover,
+                        color: playbackSpeed === speed ? colors.accent : colors.text,
+                      }}
+                    >
+                      {speed}x
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
