@@ -1,8 +1,10 @@
-import { useEffect, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, useMap, ZoomControl } from 'react-leaflet';
+import { useEffect, useRef, useMemo, useState } from 'react';
+import { MapContainer, Polyline, Marker, useMap, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Theme } from '@/types';
+
+type MapType = 'map' | 'satellite' | 'terrain' | 'hybrid';
 
 interface MapViewProps {
   theme: Theme;
@@ -12,6 +14,52 @@ interface MapViewProps {
   longitude?: number;
   heading?: number;
 }
+
+// Map tile configurations
+const MAP_TILES: Record<MapType, { url: string; attribution: string; maxZoom?: number }> = {
+  map: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  },
+  satellite: {
+    url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps',
+    maxZoom: 20,
+  },
+  terrain: {
+    url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps',
+    maxZoom: 20,
+  },
+  hybrid: {
+    url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps',
+    maxZoom: 20,
+  },
+};
+
+// Dark mode map tiles
+const DARK_MAP_TILES: Record<MapType, { url: string; attribution: string; maxZoom?: number }> = {
+  map: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  },
+  satellite: {
+    url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps',
+    maxZoom: 20,
+  },
+  terrain: {
+    url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps',
+    maxZoom: 20,
+  },
+  hybrid: {
+    url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps',
+    maxZoom: 20,
+  },
+};
 
 // Custom aircraft icon
 function createAircraftIcon(heading: number, theme: Theme) {
@@ -74,6 +122,39 @@ function MapFollower({ position, shouldFollow }: { position: [number, number]; s
   return null;
 }
 
+// Dynamic tile layer component that updates when map type changes
+function DynamicTileLayer({ mapType, theme }: { mapType: MapType; theme: Theme }) {
+  const map = useMap();
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+
+  useEffect(() => {
+    // Remove existing tile layer
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+
+    // Get tile configuration based on theme
+    const tiles = theme === 'dark' ? DARK_MAP_TILES : MAP_TILES;
+    const tileConfig = tiles[mapType];
+
+    // Create and add new tile layer
+    tileLayerRef.current = L.tileLayer(tileConfig.url, {
+      attribution: tileConfig.attribution,
+      maxZoom: tileConfig.maxZoom || 19,
+    });
+
+    tileLayerRef.current.addTo(map);
+
+    return () => {
+      if (tileLayerRef.current) {
+        map.removeLayer(tileLayerRef.current);
+      }
+    };
+  }, [map, mapType, theme]);
+
+  return null;
+}
+
 // Generate realistic waypoints around a center point
 function generateMissionWaypoints(
   centerLat: number,
@@ -109,6 +190,8 @@ export function MapView({
   longitude = 30.5234,
   heading = 45,
 }: MapViewProps) {
+  const [mapType, setMapType] = useState<MapType>('satellite');
+
   const colors = useMemo(
     () =>
       theme === 'dark'
@@ -141,11 +224,15 @@ export function MapView({
   const completedPath = missionWaypoints.slice(0, currentWp);
   const plannedPath = missionWaypoints.slice(currentWp - 1);
 
-  // Dark mode map tiles
-  const tileUrl =
-    theme === 'dark'
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  // Check if using satellite/hybrid for styling adjustments
+  const isSatelliteView = mapType === 'satellite' || mapType === 'hybrid';
+
+  const mapTypeOptions: { type: MapType; label: string; icon: string }[] = [
+    { type: 'map', label: 'Map', icon: '🗺️' },
+    { type: 'satellite', label: 'Satellite', icon: '🛰️' },
+    { type: 'hybrid', label: 'Hybrid', icon: '🌐' },
+    { type: 'terrain', label: 'Terrain', icon: '⛰️' },
+  ];
 
   return (
     <div className="relative w-full h-full">
@@ -157,10 +244,8 @@ export function MapView({
         attributionControl={false}
         style={{ background: theme === 'dark' ? '#0d1117' : '#e8f4f8' }}
       >
-        <TileLayer
-          url={tileUrl}
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        />
+        {/* Dynamic tile layer */}
+        <DynamicTileLayer mapType={mapType} theme={theme} />
         <ZoomControl position="bottomright" />
 
         {/* Map follower */}
@@ -171,9 +256,9 @@ export function MapView({
           <Polyline
             positions={plannedPath}
             pathOptions={{
-              color: colors.pathPlanned,
+              color: isSatelliteView ? '#ffffff' : colors.pathPlanned,
               weight: 3,
-              opacity: 0.4,
+              opacity: 0.6,
               dashArray: '10, 10',
             }}
           />
@@ -184,7 +269,7 @@ export function MapView({
           <Polyline
             positions={completedPath}
             pathOptions={{
-              color: colors.pathCompleted,
+              color: isSatelliteView ? '#00ff88' : colors.pathCompleted,
               weight: 4,
               opacity: 1,
             }}
@@ -220,14 +305,18 @@ export function MapView({
       <div
         className="absolute bottom-16 left-3 px-3 py-2 rounded-lg backdrop-blur-sm z-[1000]"
         style={{
-          backgroundColor: theme === 'dark' ? 'rgba(10, 15, 20, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-          border: `1px solid ${theme === 'dark' ? '#1a2332' : '#e2e8f0'}`,
+          backgroundColor: isSatelliteView
+            ? 'rgba(0, 0, 0, 0.75)'
+            : theme === 'dark'
+              ? 'rgba(10, 15, 20, 0.9)'
+              : 'rgba(255, 255, 255, 0.95)',
+          border: `1px solid ${isSatelliteView ? 'rgba(255, 255, 255, 0.2)' : theme === 'dark' ? '#1a2332' : '#e2e8f0'}`,
           fontFamily: "'JetBrains Mono', monospace",
         }}
       >
         <div
           style={{
-            color: theme === 'dark' ? '#667788' : '#64748b',
+            color: isSatelliteView ? '#aaaaaa' : theme === 'dark' ? '#667788' : '#64748b',
             fontSize: '10px',
             marginBottom: '2px',
           }}
@@ -236,7 +325,7 @@ export function MapView({
         </div>
         <div
           style={{
-            color: theme === 'dark' ? '#ffffff' : '#1e293b',
+            color: isSatelliteView ? '#ffffff' : theme === 'dark' ? '#ffffff' : '#1e293b',
             fontSize: '12px',
             fontWeight: 500,
           }}
@@ -245,7 +334,7 @@ export function MapView({
         </div>
         <div
           style={{
-            color: theme === 'dark' ? '#ffffff' : '#1e293b',
+            color: isSatelliteView ? '#ffffff' : theme === 'dark' ? '#ffffff' : '#1e293b',
             fontSize: '12px',
             fontWeight: 500,
           }}
@@ -258,38 +347,63 @@ export function MapView({
       <div
         className="absolute top-3 right-3 flex gap-1 z-[1000]"
         style={{
-          backgroundColor: theme === 'dark' ? 'rgba(10, 15, 20, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: isSatelliteView
+            ? 'rgba(0, 0, 0, 0.75)'
+            : theme === 'dark'
+              ? 'rgba(10, 15, 20, 0.9)'
+              : 'rgba(255, 255, 255, 0.95)',
           padding: '4px',
           borderRadius: '8px',
-          border: `1px solid ${theme === 'dark' ? '#1a2332' : '#e2e8f0'}`,
+          border: `1px solid ${isSatelliteView ? 'rgba(255, 255, 255, 0.2)' : theme === 'dark' ? '#1a2332' : '#e2e8f0'}`,
         }}
       >
-        <button
-          className="px-3 py-1.5 rounded text-xs font-medium"
-          style={{
-            backgroundColor: theme === 'dark' ? '#00d4ff20' : '#0066cc20',
-            color: theme === 'dark' ? '#00d4ff' : '#0066cc',
-          }}
-        >
-          Map
-        </button>
-        <button
-          className="px-3 py-1.5 rounded text-xs font-medium"
-          style={{
-            color: theme === 'dark' ? '#667788' : '#64748b',
-          }}
-        >
-          Satellite
-        </button>
-        <button
-          className="px-3 py-1.5 rounded text-xs font-medium"
-          style={{
-            color: theme === 'dark' ? '#667788' : '#64748b',
-          }}
-        >
-          Terrain
-        </button>
+        {mapTypeOptions.map((option) => (
+          <button
+            key={option.type}
+            onClick={() => setMapType(option.type)}
+            className="px-3 py-1.5 rounded text-xs font-medium transition-all cursor-pointer"
+            style={{
+              backgroundColor:
+                mapType === option.type
+                  ? isSatelliteView
+                    ? 'rgba(255, 255, 255, 0.2)'
+                    : theme === 'dark'
+                      ? '#00d4ff20'
+                      : '#0066cc20'
+                  : 'transparent',
+              color:
+                mapType === option.type
+                  ? isSatelliteView
+                    ? '#ffffff'
+                    : theme === 'dark'
+                      ? '#00d4ff'
+                      : '#0066cc'
+                  : isSatelliteView
+                    ? '#aaaaaa'
+                    : theme === 'dark'
+                      ? '#667788'
+                      : '#64748b',
+            }}
+            title={option.label}
+          >
+            <span className="mr-1">{option.icon}</span>
+            {option.label}
+          </button>
+        ))}
       </div>
+
+      {/* Google Maps attribution */}
+      {(mapType === 'satellite' || mapType === 'hybrid' || mapType === 'terrain') && (
+        <div
+          className="absolute bottom-3 right-14 px-2 py-1 rounded text-xs z-[1000]"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            color: '#ffffff',
+          }}
+        >
+          Map data © Google
+        </div>
+      )}
     </div>
   );
 }
