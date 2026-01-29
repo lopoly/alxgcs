@@ -1,8 +1,40 @@
 import { useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, Polygon, useMapEvents, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Theme } from '@/types';
+import { GeofenceEditor, SurveyPatternEditor } from '@/components/mission';
+
+// Geofence types
+interface GeofenceZone {
+  id: string;
+  type: 'inclusion' | 'exclusion';
+  points: [number, number][];
+}
+
+interface GeofenceSettings {
+  enabled: boolean;
+  action: 'report' | 'rtl' | 'land' | 'brake';
+  maxAltitude: number;
+  minAltitude: number;
+  zones: GeofenceZone[];
+}
+
+// Survey types
+interface SurveyPattern {
+  id: string;
+  type: 'grid' | 'corridor' | 'spiral';
+  polygon: [number, number][];
+  altitude: number;
+  speed: number;
+  gridSpacing: number;
+  gridAngle: number;
+  overlap: number;
+  sidelap: number;
+  terrainFollow: boolean;
+  cameraType: 'mapping' | 'oblique' | 'video';
+  turnaroundDistance: number;
+}
 
 interface PlanViewProps {
   theme: Theme;
@@ -67,6 +99,31 @@ export function PlanView({ theme }: PlanViewProps) {
   const [selectedItem, setSelectedItem] = useState<number | null>(2);
   const [editMode, setEditMode] = useState<'waypoint' | 'survey' | 'geofence'>('waypoint');
 
+  // Geofence state
+  const [geofenceSettings, setGeofenceSettings] = useState<GeofenceSettings>({
+    enabled: true,
+    action: 'rtl',
+    maxAltitude: 120,
+    minAltitude: 0,
+    zones: [
+      {
+        id: 'zone-1',
+        type: 'inclusion',
+        points: [
+          [50.445, 30.510],
+          [50.465, 30.510],
+          [50.465, 30.550],
+          [50.445, 30.550],
+        ],
+      },
+    ],
+  });
+  const [selectedGeofenceZone, setSelectedGeofenceZone] = useState<string | null>(null);
+
+  // Survey pattern state
+  const [surveyPattern, setSurveyPattern] = useState<SurveyPattern | null>(null);
+  const [isSurveyDrawing, setIsSurveyDrawing] = useState(false);
+
   const colors = useMemo(
     () =>
       theme === 'dark'
@@ -120,6 +177,22 @@ export function PlanView({ theme }: PlanViewProps) {
         setMissionItems([...missionItems, newItem]);
       }
       setSelectedItem(newId);
+    } else if (editMode === 'geofence' && selectedGeofenceZone) {
+      // Add point to selected geofence zone
+      setGeofenceSettings((prev) => ({
+        ...prev,
+        zones: prev.zones.map((zone) =>
+          zone.id === selectedGeofenceZone
+            ? { ...zone, points: [...zone.points, [lat, lng] as [number, number]] }
+            : zone
+        ),
+      }));
+    } else if (editMode === 'survey' && isSurveyDrawing && surveyPattern) {
+      // Add point to survey polygon
+      setSurveyPattern({
+        ...surveyPattern,
+        polygon: [...surveyPattern.polygon, [lat, lng]],
+      });
     }
   };
 
@@ -199,57 +272,82 @@ export function PlanView({ theme }: PlanViewProps) {
           </div>
         </div>
 
-        {/* Mission List */}
-        <div className="flex-1 overflow-y-auto p-2">
-          <div className="text-xs uppercase tracking-wider mb-2 px-2" style={{ color: colors.text }}>
-            Mission Items ({missionItems.length})
-          </div>
-          {missionItems.map((item, index) => (
-            <div
-              key={item.id}
-              onClick={() => setSelectedItem(item.id)}
-              className="flex items-center gap-2 p-2 rounded-lg mb-1 cursor-pointer transition-colors"
-              style={{
-                backgroundColor: selectedItem === item.id ? colors.accent + '20' : 'transparent',
-                border: `1px solid ${selectedItem === item.id ? colors.accent : 'transparent'}`,
-              }}
-            >
-              <span className="text-lg">{getMissionTypeIcon(item.type)}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate" style={{ color: colors.textPrimary }}>
-                  {index + 1}. {getMissionTypeLabel(item.type)}
-                </div>
-                <div className="text-xs" style={{ color: colors.text }}>
-                  {item.lat ? `${item.lat.toFixed(4)}, ${item.lng?.toFixed(4)}` : '—'}
-                  {item.altitude > 0 && ` • ${item.altitude}m`}
-                </div>
+        {/* Content based on edit mode */}
+        {editMode === 'waypoint' && (
+          <>
+            {/* Mission List */}
+            <div className="flex-1 overflow-y-auto p-2">
+              <div className="text-xs uppercase tracking-wider mb-2 px-2" style={{ color: colors.text }}>
+                Mission Items ({missionItems.length})
               </div>
-              {item.type !== 'takeoff' && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteItem(item.id);
+              {missionItems.map((item, index) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedItem(item.id)}
+                  className="flex items-center gap-2 p-2 rounded-lg mb-1 cursor-pointer transition-colors"
+                  style={{
+                    backgroundColor: selectedItem === item.id ? colors.accent + '20' : 'transparent',
+                    border: `1px solid ${selectedItem === item.id ? colors.accent : 'transparent'}`,
                   }}
-                  className="p-1 rounded hover:bg-red-500/20"
-                  style={{ color: '#ff4466' }}
                 >
-                  ×
-                </button>
-              )}
+                  <span className="text-lg">{getMissionTypeIcon(item.type)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color: colors.textPrimary }}>
+                      {index + 1}. {getMissionTypeLabel(item.type)}
+                    </div>
+                    <div className="text-xs" style={{ color: colors.text }}>
+                      {item.lat ? `${item.lat.toFixed(4)}, ${item.lng?.toFixed(4)}` : '—'}
+                      {item.altitude > 0 && ` • ${item.altitude}m`}
+                    </div>
+                  </div>
+                  {item.type !== 'takeoff' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteItem(item.id);
+                      }}
+                      className="p-1 rounded hover:bg-red-500/20"
+                      style={{ color: '#ff4466' }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Validation Status */}
-        <div
-          className="p-3 border-t flex items-center gap-2"
-          style={{ borderColor: colors.border }}
-        >
-          <span style={{ color: '#00ff88' }}>✓</span>
-          <span className="text-sm" style={{ color: colors.text }}>
-            Mission valid • {waypointsWithCoords.length} waypoints
-          </span>
-        </div>
+            {/* Validation Status */}
+            <div
+              className="p-3 border-t flex items-center gap-2"
+              style={{ borderColor: colors.border }}
+            >
+              <span style={{ color: '#00ff88' }}>✓</span>
+              <span className="text-sm" style={{ color: colors.text }}>
+                Mission valid • {waypointsWithCoords.length} waypoints
+              </span>
+            </div>
+          </>
+        )}
+
+        {editMode === 'geofence' && (
+          <GeofenceEditor
+            theme={theme}
+            settings={geofenceSettings}
+            onSettingsChange={setGeofenceSettings}
+            selectedZoneId={selectedGeofenceZone}
+            onSelectZone={setSelectedGeofenceZone}
+          />
+        )}
+
+        {editMode === 'survey' && (
+          <SurveyPatternEditor
+            theme={theme}
+            pattern={surveyPattern}
+            onPatternChange={setSurveyPattern}
+            onStartDrawing={() => setIsSurveyDrawing(true)}
+            isDrawing={isSurveyDrawing}
+          />
+        )}
       </div>
 
       {/* Center - Map */}
@@ -292,6 +390,42 @@ export function PlanView({ theme }: PlanViewProps) {
               }}
             />
           ))}
+
+          {/* Geofence zones */}
+          {geofenceSettings.enabled &&
+            geofenceSettings.zones.map((zone) => (
+              <Polygon
+                key={zone.id}
+                positions={zone.points}
+                pathOptions={{
+                  color: zone.type === 'inclusion' ? '#00ff88' : '#ff4466',
+                  fillColor: zone.type === 'inclusion' ? '#00ff88' : '#ff4466',
+                  fillOpacity: 0.15,
+                  weight: selectedGeofenceZone === zone.id ? 3 : 2,
+                  dashArray: zone.type === 'exclusion' ? '10, 10' : undefined,
+                }}
+                eventHandlers={{
+                  click: () => {
+                    if (editMode === 'geofence') {
+                      setSelectedGeofenceZone(zone.id);
+                    }
+                  },
+                }}
+              />
+            ))}
+
+          {/* Survey pattern polygon */}
+          {surveyPattern && surveyPattern.polygon.length >= 3 && (
+            <Polygon
+              positions={surveyPattern.polygon}
+              pathOptions={{
+                color: '#8855ff',
+                fillColor: '#8855ff',
+                fillOpacity: 0.2,
+                weight: 2,
+              }}
+            />
+          )}
         </MapContainer>
 
         {/* Edit Mode Hint */}
