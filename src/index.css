@@ -7,10 +7,21 @@
   font-family: 'Inter', -apple-system, sans-serif;
 }
 
+/* Fix default Leaflet divIcon styling that shows unwanted numbers/borders */
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
 .aircraft-icon,
 .waypoint-icon {
   background: transparent !important;
   border: none !important;
+}
+
+/* Hide default marker shadow */
+.leaflet-marker-shadow {
+  display: none !important;
 }
 
 .leaflet-control-zoom {
