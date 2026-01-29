@@ -169,6 +169,9 @@ export interface SystemHealth {
 // View types
 export type ViewType = 'flight' | 'plan' | 'configure' | 'analyze' | 'settings' | 'admin';
 
+// Connection status
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+
 // Component props
 export interface ThemeProps {
   theme: Theme;

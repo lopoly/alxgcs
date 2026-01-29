@@ -1,7 +1,42 @@
-import { useState, useEffect } from 'react';
-import type { TelemetryData, FlightMode } from '@/types';
+import { useState, useEffect, useCallback } from 'react';
+import type { TelemetryData, FlightMode, ConnectionStatus } from '@/types';
 
-const initialTelemetry: TelemetryData = {
+// Default telemetry values when disconnected (all zeroed/null state)
+const disconnectedTelemetry: TelemetryData = {
+  altitude: 0,
+  speed: 0,
+  heading: 0,
+  battery: 0,
+  signalStrength: 0,
+  gpsCount: 0,
+  flightMode: 'MANUAL' as FlightMode,
+  armed: false,
+  latitude: 0,
+  longitude: 0,
+  verticalSpeed: 0,
+  groundSpeed: 0,
+  airSpeed: 0,
+  throttle: 0,
+  pitch: 0,
+  roll: 0,
+  yaw: 0,
+  voltage: 0,
+  current: 0,
+  mah: 0,
+  distance: 0,
+  homeDistance: 0,
+  eta: '--:--:--',
+  flightTime: '00:00:00',
+  nextWaypoint: 0,
+  totalWaypoints: 0,
+  distanceToWaypoint: 0,
+  windSpeed: 0,
+  windDir: 0,
+  temperature: 0,
+};
+
+// Mock telemetry for demo mode
+const demoTelemetry: TelemetryData = {
   altitude: 847,
   speed: 72,
   heading: 127,
@@ -34,10 +69,33 @@ const initialTelemetry: TelemetryData = {
   temperature: -12,
 };
 
-export function useTelemetry(): TelemetryData {
-  const [data, setData] = useState<TelemetryData>(initialTelemetry);
+export interface UseTelemetryResult {
+  data: TelemetryData;
+  connectionStatus: ConnectionStatus;
+  isDemo: boolean;
+  enableDemo: () => void;
+  disableDemo: () => void;
+}
 
+export function useTelemetry(): UseTelemetryResult {
+  const [connectionStatus] = useState<ConnectionStatus>('disconnected');
+  const [isDemo, setIsDemo] = useState(false);
+  const [data, setData] = useState<TelemetryData>(disconnectedTelemetry);
+
+  const enableDemo = useCallback(() => {
+    setIsDemo(true);
+    setData(demoTelemetry);
+  }, []);
+
+  const disableDemo = useCallback(() => {
+    setIsDemo(false);
+    setData(disconnectedTelemetry);
+  }, []);
+
+  // Simulate telemetry updates only in demo mode
   useEffect(() => {
+    if (!isDemo) return;
+
     const interval = setInterval(() => {
       setData((prev) => ({
         ...prev,
@@ -55,7 +113,13 @@ export function useTelemetry(): TelemetryData {
     }, 100);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isDemo]);
 
-  return data;
+  return {
+    data,
+    connectionStatus: isDemo ? 'connected' : connectionStatus,
+    isDemo,
+    enableDemo,
+    disableDemo,
+  };
 }

@@ -205,7 +205,7 @@ export default function App() {
   const { theme, toggleTheme } = useThemeStore();
   const { currentView, setView } = useViewStore();
   const { pendingCommand, setPendingCommand, confirmCommand, cancelCommand, isArmed } = useCommandStore();
-  const telemetry = useTelemetry();
+  const { data: telemetry, connectionStatus, isDemo, enableDemo, disableDemo } = useTelemetry();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   // State
@@ -386,7 +386,17 @@ export default function App() {
   const renderView = () => {
     switch (currentView) {
       case 'flight':
-        return <FlightView telemetry={telemetry} theme={theme} onThemeToggle={toggleTheme} />;
+        return (
+          <FlightView
+            telemetry={telemetry}
+            theme={theme}
+            onThemeToggle={toggleTheme}
+            connectionStatus={connectionStatus}
+            isDemo={isDemo}
+            onEnableDemo={enableDemo}
+            onDisableDemo={disableDemo}
+          />
+        );
       case 'plan':
         return <PlanView theme={theme} />;
       case 'configure':
@@ -396,7 +406,17 @@ export default function App() {
       case 'settings':
         return <SettingsView theme={theme} onThemeChange={toggleTheme} />;
       default:
-        return <FlightView telemetry={telemetry} theme={theme} onThemeToggle={toggleTheme} />;
+        return (
+          <FlightView
+            telemetry={telemetry}
+            theme={theme}
+            onThemeToggle={toggleTheme}
+            connectionStatus={connectionStatus}
+            isDemo={isDemo}
+            onEnableDemo={enableDemo}
+            onDisableDemo={disableDemo}
+          />
+        );
     }
   };
 
