@@ -52,9 +52,11 @@ interface NavigationProps {
   onShowHelp: () => void;
   onShowConnections: () => void;
   connectionCount: number;
+  isArmed: boolean;
+  onThemeToggle: () => void;
 }
 
-function Navigation({ selectedVehicle, onVehicleSelect, onShowHelp, onShowConnections, connectionCount }: NavigationProps) {
+function Navigation({ selectedVehicle, onVehicleSelect, onShowHelp, onShowConnections, connectionCount, isArmed, onThemeToggle }: NavigationProps) {
   const { theme } = useThemeStore();
   const { currentView, setView } = useViewStore();
 
@@ -66,6 +68,8 @@ function Navigation({ selectedVehicle, onVehicleSelect, onShowHelp, onShowConnec
           text: '#667788',
           textActive: '#ffffff',
           accent: '#00d4ff',
+          armed: '#ff4466',
+          disarmed: '#00ff88',
         }
       : {
           bg: '#ffffff',
@@ -73,6 +77,8 @@ function Navigation({ selectedVehicle, onVehicleSelect, onShowHelp, onShowConnec
           text: '#94a3b8',
           textActive: '#1e293b',
           accent: '#0066cc',
+          armed: '#dc2626',
+          disarmed: '#16a34a',
         };
 
   return (
@@ -119,7 +125,40 @@ function Navigation({ selectedVehicle, onVehicleSelect, onShowHelp, onShowConnec
       </div>
 
       {/* Right side buttons */}
-      <div className="w-64 flex justify-end gap-2">
+      <div className="flex justify-end items-center gap-2">
+        {/* Armed Status Indicator */}
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+          style={{
+            backgroundColor: isArmed ? colors.armed + '20' : colors.disarmed + '20',
+            border: `1px solid ${isArmed ? colors.armed : colors.disarmed}`,
+          }}
+        >
+          <span
+            className="w-2 h-2 rounded-full animate-pulse"
+            style={{ backgroundColor: isArmed ? colors.armed : colors.disarmed }}
+          />
+          <span
+            className="text-sm font-medium"
+            style={{ color: isArmed ? colors.armed : colors.disarmed }}
+          >
+            {isArmed ? 'ARMED' : 'DISARMED'}
+          </span>
+        </div>
+
+        {/* Theme Toggle */}
+        <button
+          onClick={onThemeToggle}
+          className="flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
+          style={{
+            backgroundColor: theme === 'dark' ? '#1a2332' : '#e2e8f0',
+            color: colors.text,
+          }}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          <span className="text-lg">{theme === 'dark' ? '☀️' : '🌙'}</span>
+        </button>
+
         {/* Connections Button */}
         <button
           onClick={onShowConnections}
@@ -346,6 +385,8 @@ export default function App() {
         onShowHelp={() => setShowHelpModal(true)}
         onShowConnections={() => setShowConnectionManager(true)}
         connectionCount={connections.filter((c) => c.connected).length}
+        isArmed={isArmed}
+        onThemeToggle={toggleTheme}
       />
       <div className="flex-1 overflow-hidden">{renderView()}</div>
 

@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, Polygon, useMapEvents, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, Polygon, useMapEvents, ZoomControl, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Theme } from '@/types';
-import { GeofenceEditor, SurveyPatternEditor } from '@/components/mission';
+import { GeofenceEditor, SurveyPatternEditor, RallyPointsEditor, type RallyPoint } from '@/components/mission';
 
 // Geofence types
 interface GeofenceZone {
@@ -97,7 +97,14 @@ export function PlanView({ theme }: PlanViewProps) {
     { id: 6, type: 'rtl', altitude: 0 },
   ]);
   const [selectedItem, setSelectedItem] = useState<number | null>(2);
-  const [editMode, setEditMode] = useState<'waypoint' | 'survey' | 'geofence'>('waypoint');
+  const [editMode, setEditMode] = useState<'waypoint' | 'survey' | 'geofence' | 'rally'>('waypoint');
+
+  // Rally points state
+  const [rallyPoints, setRallyPoints] = useState<RallyPoint[]>([
+    { id: 'rally-1', lat: 50.448, lng: 30.525, altitude: 80, isLanding: true },
+  ]);
+  const [selectedRallyPoint, setSelectedRallyPoint] = useState<string | null>(null);
+  const homePosition = { lat: 50.4501, lng: 30.5234 };
 
   // Geofence state
   const [geofenceSettings, setGeofenceSettings] = useState<GeofenceSettings>({
@@ -193,6 +200,17 @@ export function PlanView({ theme }: PlanViewProps) {
         ...surveyPattern,
         polygon: [...surveyPattern.polygon, [lat, lng]],
       });
+    } else if (editMode === 'rally') {
+      // Add new rally point
+      const newRallyPoint: RallyPoint = {
+        id: `rally-${Date.now()}`,
+        lat,
+        lng,
+        altitude: 80,
+        isLanding: false,
+      };
+      setRallyPoints([...rallyPoints, newRallyPoint]);
+      setSelectedRallyPoint(newRallyPoint.id);
     }
   };
 
@@ -240,12 +258,12 @@ export function PlanView({ theme }: PlanViewProps) {
       >
         {/* Tools Header */}
         <div className="p-3 border-b" style={{ borderColor: colors.border }}>
-          <div className="flex gap-1 mb-3">
-            {(['waypoint', 'survey', 'geofence'] as const).map((mode) => (
+          <div className="grid grid-cols-4 gap-1 mb-3">
+            {(['waypoint', 'survey', 'geofence', 'rally'] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setEditMode(mode)}
-                className="flex-1 px-3 py-2 rounded-lg text-xs font-medium capitalize"
+                className="px-2 py-2 rounded-lg text-xs font-medium capitalize"
                 style={{
                   backgroundColor: editMode === mode ? colors.accent + '20' : 'transparent',
                   color: editMode === mode ? colors.accent : colors.text,
@@ -348,6 +366,17 @@ export function PlanView({ theme }: PlanViewProps) {
             isDrawing={isSurveyDrawing}
           />
         )}
+
+        {editMode === 'rally' && (
+          <RallyPointsEditor
+            theme={theme}
+            rallyPoints={rallyPoints}
+            onRallyPointsChange={setRallyPoints}
+            selectedPointId={selectedRallyPoint}
+            onSelectPoint={setSelectedRallyPoint}
+            homePosition={homePosition}
+          />
+        )}
       </div>
 
       {/* Center - Map */}
@@ -426,6 +455,41 @@ export function PlanView({ theme }: PlanViewProps) {
               }}
             />
           )}
+
+          {/* Rally point markers */}
+          {rallyPoints.map((point) => (
+            <CircleMarker
+              key={point.id}
+              center={[point.lat, point.lng]}
+              radius={selectedRallyPoint === point.id ? 12 : 10}
+              pathOptions={{
+                color: '#ffaa00',
+                fillColor: point.isLanding ? '#00ff88' : '#ffaa00',
+                fillOpacity: 0.8,
+                weight: selectedRallyPoint === point.id ? 3 : 2,
+              }}
+              eventHandlers={{
+                click: () => {
+                  if (editMode === 'rally') {
+                    setSelectedRallyPoint(point.id);
+                  }
+                },
+              }}
+            >
+            </CircleMarker>
+          ))}
+
+          {/* Home position marker */}
+          <CircleMarker
+            center={[homePosition.lat, homePosition.lng]}
+            radius={8}
+            pathOptions={{
+              color: '#ffffff',
+              fillColor: '#00ff88',
+              fillOpacity: 1,
+              weight: 2,
+            }}
+          />
         </MapContainer>
 
         {/* Edit Mode Hint */}
@@ -440,6 +504,7 @@ export function PlanView({ theme }: PlanViewProps) {
             {editMode === 'waypoint' && '📍 Click map to add waypoint'}
             {editMode === 'survey' && '📐 Draw survey polygon'}
             {editMode === 'geofence' && '🚧 Draw geofence boundary'}
+            {editMode === 'rally' && '🚩 Click map to add rally point'}
           </span>
         </div>
 

@@ -33,6 +33,26 @@ const graphTypes = [
   { id: 'gps', label: 'GPS', unit: 'sats' },
 ];
 
+interface FlightEvent {
+  id: string;
+  time: string;
+  type: 'info' | 'warning' | 'error' | 'mode';
+  message: string;
+  position: number; // 0-100 timeline position
+}
+
+const mockEvents: FlightEvent[] = [
+  { id: 'e1', time: '00:00:00', type: 'info', message: 'Armed', position: 0 },
+  { id: 'e2', time: '00:00:15', type: 'mode', message: 'Mode: AUTO', position: 1 },
+  { id: 'e3', time: '00:05:22', type: 'info', message: 'Waypoint 1 reached', position: 13 },
+  { id: 'e4', time: '00:12:45', type: 'warning', message: 'GPS HDOP high (2.5)', position: 31 },
+  { id: 'e5', time: '00:18:30', type: 'info', message: 'Waypoint 5 reached', position: 45 },
+  { id: 'e6', time: '00:25:10', type: 'mode', message: 'Mode: RTL', position: 61 },
+  { id: 'e7', time: '00:32:00', type: 'warning', message: 'Low battery (25%)', position: 78 },
+  { id: 'e8', time: '00:38:45', type: 'info', message: 'Landing detected', position: 94 },
+  { id: 'e9', time: '00:41:18', type: 'info', message: 'Disarmed', position: 100 },
+];
+
 export function AnalyzeView({ theme }: AnalyzeViewProps) {
   const [selectedLog, setSelectedLog] = useState<string | null>('1');
   const [activeGraphs, setActiveGraphs] = useState<string[]>(['altitude', 'speed']);
@@ -302,6 +322,78 @@ export function AnalyzeView({ theme }: AnalyzeViewProps) {
             <div className="flex-1 overflow-y-auto p-4">
               <div className="grid grid-cols-2 gap-4">
                 {activeGraphs.map((graphId) => renderGraph(graphId))}
+              </div>
+            </div>
+
+            {/* Events Timeline */}
+            <div className="p-4 border-t" style={{ borderColor: colors.border }}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+                  Flight Events
+                </span>
+                <span className="text-xs" style={{ color: colors.text }}>
+                  {mockEvents.length} events
+                </span>
+              </div>
+              <div className="relative h-8 rounded-lg overflow-hidden" style={{ backgroundColor: colors.graphBg }}>
+                {/* Timeline bar */}
+                <div
+                  className="absolute top-0 left-0 h-full"
+                  style={{
+                    width: `${playbackPosition}%`,
+                    backgroundColor: colors.accent + '30',
+                  }}
+                />
+                {/* Event markers */}
+                {mockEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full cursor-pointer hover:scale-125 transition-transform"
+                    style={{
+                      left: `${event.position}%`,
+                      backgroundColor:
+                        event.type === 'error' ? colors.error :
+                        event.type === 'warning' ? colors.warning :
+                        event.type === 'mode' ? colors.accent :
+                        colors.success,
+                      transform: `translateX(-50%) translateY(-50%)`,
+                    }}
+                    title={`${event.time} - ${event.message}`}
+                  />
+                ))}
+                {/* Playback cursor */}
+                <div
+                  className="absolute top-0 h-full w-0.5"
+                  style={{
+                    left: `${playbackPosition}%`,
+                    backgroundColor: colors.warning,
+                  }}
+                />
+              </div>
+              {/* Event list */}
+              <div className="mt-2 max-h-24 overflow-y-auto">
+                <div className="flex flex-wrap gap-1">
+                  {mockEvents.filter(e => e.position <= playbackPosition).slice(-5).map((event) => (
+                    <span
+                      key={event.id}
+                      className="text-xs px-2 py-0.5 rounded"
+                      style={{
+                        backgroundColor:
+                          event.type === 'error' ? colors.error + '20' :
+                          event.type === 'warning' ? colors.warning + '20' :
+                          event.type === 'mode' ? colors.accent + '20' :
+                          colors.success + '20',
+                        color:
+                          event.type === 'error' ? colors.error :
+                          event.type === 'warning' ? colors.warning :
+                          event.type === 'mode' ? colors.accent :
+                          colors.success,
+                      }}
+                    >
+                      {event.time} {event.message}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 

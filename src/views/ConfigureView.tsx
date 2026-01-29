@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { Theme } from '@/types';
+import { CalibrationWizard } from '@/components/configure';
+import { useNotificationStore } from '@/stores/useNotificationStore';
 
 interface ConfigureViewProps {
   theme: Theme;
@@ -14,6 +16,8 @@ type ConfigSection =
   | 'safety'
   | 'power'
   | 'parameters';
+
+type CalibrationSensor = 'compass' | 'accel' | 'gyro' | 'level' | 'radio' | 'esc';
 
 const sections: { id: ConfigSection; label: string; icon: string }[] = [
   { id: 'summary', label: 'Summary', icon: '📊' },
@@ -58,6 +62,8 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
   const [activeSection, setActiveSection] = useState<ConfigSection>('summary');
   const [paramSearch, setParamSearch] = useState('');
   const [editingParam, setEditingParam] = useState<string | null>(null);
+  const [calibrationSensor, setCalibrationSensor] = useState<CalibrationSensor | null>(null);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   const colors = useMemo(
     () =>
@@ -170,30 +176,98 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
     </div>
   );
 
+  const calibrationItems: { sensor: CalibrationSensor; name: string; desc: string; action: string; status: 'ok' | 'warning' | 'error' }[] = [
+    { sensor: 'accel', name: 'Accelerometer', desc: 'Level calibration required', action: 'Calibrate', status: 'ok' },
+    { sensor: 'compass', name: 'Compass', desc: 'Outdoor calibration recommended', action: 'Calibrate', status: 'warning' },
+    { sensor: 'gyro', name: 'Gyroscope', desc: 'Keep vehicle still during calibration', action: 'Calibrate', status: 'ok' },
+    { sensor: 'level', name: 'Level Horizon', desc: 'Set level flight reference', action: 'Calibrate', status: 'ok' },
+    { sensor: 'radio', name: 'Radio', desc: 'Calibrate RC transmitter endpoints', action: 'Calibrate', status: 'ok' },
+    { sensor: 'esc', name: 'ESC', desc: 'Calibrate motor speed controllers', action: 'Calibrate', status: 'ok' },
+  ];
+
+  const handleCalibrationComplete = (success: boolean) => {
+    setCalibrationSensor(null);
+    if (success) {
+      addNotification({
+        type: 'success',
+        title: 'Calibration Complete',
+        message: 'Sensor has been calibrated successfully',
+      });
+    } else {
+      addNotification({
+        type: 'error',
+        title: 'Calibration Failed',
+        message: 'Please try again or check sensor connections',
+      });
+    }
+  };
+
   const renderSensors = () => (
     <div className="space-y-4">
       <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
         <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Sensor Calibration</h3>
         <div className="space-y-3">
-          {[
-            { name: 'Accelerometer', desc: 'Level calibration required', action: 'Calibrate Level' },
-            { name: 'Compass', desc: 'Outdoor calibration recommended', action: 'Start Calibration' },
-            { name: 'Radio', desc: 'Calibrate RC transmitter', action: 'Start RC Calibration' },
-            { name: 'Airspeed', desc: 'Cover pitot tube before starting', action: 'Calibrate Airspeed' },
-          ].map((cal) => (
-            <div key={cal.name} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: colors.hover }}>
-              <div>
-                <div className="font-medium" style={{ color: colors.textPrimary }}>{cal.name}</div>
-                <div className="text-sm" style={{ color: colors.text }}>{cal.desc}</div>
+          {calibrationItems.map((cal) => (
+            <div key={cal.sensor} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: colors.hover }}>
+              <div className="flex items-center gap-3">
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{
+                    backgroundColor:
+                      cal.status === 'ok' ? colors.success : cal.status === 'warning' ? colors.warning : colors.error,
+                  }}
+                />
+                <div>
+                  <div className="font-medium" style={{ color: colors.textPrimary }}>{cal.name}</div>
+                  <div className="text-sm" style={{ color: colors.text }}>{cal.desc}</div>
+                </div>
               </div>
               <button
-                className="px-4 py-2 rounded-lg text-sm font-medium"
+                onClick={() => setCalibrationSensor(cal.sensor)}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:opacity-80"
                 style={{ backgroundColor: colors.accent + '20', color: colors.accent }}
               >
                 {cal.action}
               </button>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
+        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Sensor Orientation</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>Board Rotation</label>
+            <select
+              className="w-full px-3 py-2 rounded text-sm"
+              style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}
+              defaultValue="0"
+            >
+              <option value="0">None (0°)</option>
+              <option value="1">Yaw 45°</option>
+              <option value="2">Yaw 90°</option>
+              <option value="3">Yaw 135°</option>
+              <option value="4">Yaw 180°</option>
+              <option value="5">Yaw 225°</option>
+              <option value="6">Yaw 270°</option>
+              <option value="7">Yaw 315°</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>External Compass</label>
+            <select
+              className="w-full px-3 py-2 rounded text-sm"
+              style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}
+              defaultValue="0"
+            >
+              <option value="0">None (0°)</option>
+              <option value="1">Yaw 45°</option>
+              <option value="2">Yaw 90°</option>
+              <option value="4">Yaw 180°</option>
+              <option value="6">Yaw 270°</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -402,6 +476,17 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">{renderContent()}</div>
+
+      {/* Calibration Wizard */}
+      {calibrationSensor && (
+        <CalibrationWizard
+          theme={theme}
+          sensor={calibrationSensor}
+          isOpen={true}
+          onClose={() => setCalibrationSensor(null)}
+          onComplete={handleCalibrationComplete}
+        />
+      )}
     </div>
   );
 }
