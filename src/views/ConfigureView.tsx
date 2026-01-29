@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Theme } from '@/types';
-import { CalibrationWizard, MotorTest, ParameterEditor, SafetyConfig } from '@/components/configure';
+import { CalibrationWizard, MotorTest, ParameterEditor, SafetyConfig, RadioCalibration, FlightModesConfig } from '@/components/configure';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 
 interface ConfigureViewProps {
@@ -41,10 +41,6 @@ const sensorStatus = [
   { name: 'Airspeed', status: 'ok', value: 'Enabled' },
 ];
 
-const flightModes = [
-  { channel: 1, low: 'MANUAL', mid: 'FBWA', high: 'AUTO' },
-  { channel: 2, low: 'RTL', mid: 'LOITER', high: 'GUIDED' },
-];
 
 export function ConfigureView({ theme }: ConfigureViewProps) {
   const [activeSection, setActiveSection] = useState<ConfigSection>('summary');
@@ -253,37 +249,6 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
     </div>
   );
 
-  const renderFlightModes = () => (
-    <div className="space-y-4">
-      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
-        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Flight Mode Configuration</h3>
-        <div className="space-y-4">
-          {flightModes.map((fm, idx) => (
-            <div key={idx} className="p-3 rounded-lg" style={{ backgroundColor: colors.hover }}>
-              <div className="text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>Switch {fm.channel}</div>
-              <div className="grid grid-cols-3 gap-2">
-                {(['low', 'mid', 'high'] as const).map((pos) => (
-                  <div key={pos}>
-                    <div className="text-xs uppercase mb-1" style={{ color: colors.text }}>{pos}</div>
-                    <select
-                      className="w-full px-3 py-2 rounded text-sm"
-                      style={{ backgroundColor: colors.panel, color: colors.textPrimary, border: `1px solid ${colors.border}` }}
-                      defaultValue={fm[pos]}
-                    >
-                      {['MANUAL', 'STABILIZE', 'FBWA', 'FBWB', 'AUTO', 'RTL', 'LOITER', 'GUIDED', 'CRUISE'].map((mode) => (
-                        <option key={mode} value={mode}>{mode}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
   const renderAirframe = () => (
     <div className="space-y-4">
       <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
@@ -360,83 +325,6 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
             <input type="number" defaultValue={2000} className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }} />
           </div>
         </div>
-      </div>
-    </div>
-  );
-
-  const renderRadio = () => (
-    <div className="space-y-4">
-      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
-        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>RC Channel Monitor</h3>
-        <div className="space-y-3">
-          {[
-            { channel: 1, name: 'Roll', min: 1100, max: 1900, value: 1500 },
-            { channel: 2, name: 'Pitch', min: 1100, max: 1900, value: 1520 },
-            { channel: 3, name: 'Throttle', min: 1100, max: 1900, value: 1100 },
-            { channel: 4, name: 'Yaw', min: 1100, max: 1900, value: 1500 },
-            { channel: 5, name: 'Mode', min: 1100, max: 1900, value: 1500 },
-            { channel: 6, name: 'Aux 1', min: 1100, max: 1900, value: 1500 },
-          ].map((ch) => (
-            <div key={ch.channel} className="p-3 rounded-lg" style={{ backgroundColor: colors.hover }}>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>CH{ch.channel}: {ch.name}</span>
-                <span className="text-sm font-mono" style={{ color: colors.accent }}>{ch.value}</span>
-              </div>
-              <div className="relative h-2 rounded-full" style={{ backgroundColor: colors.border }}>
-                <div
-                  className="absolute h-full rounded-full"
-                  style={{
-                    backgroundColor: colors.accent,
-                    left: '0%',
-                    width: `${((ch.value - ch.min) / (ch.max - ch.min)) * 100}%`,
-                  }}
-                />
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
-                  style={{
-                    backgroundColor: colors.textPrimary,
-                    left: `${((ch.value - ch.min) / (ch.max - ch.min)) * 100}%`,
-                    transform: 'translateX(-50%) translateY(-50%)',
-                  }}
-                />
-              </div>
-              <div className="flex justify-between mt-1 text-xs" style={{ color: colors.text }}>
-                <span>{ch.min}</span>
-                <span>{ch.max}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="p-4 rounded-lg border" style={{ backgroundColor: colors.panel, borderColor: colors.border }}>
-        <h3 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Transmitter Setup</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>RC Protocol</label>
-            <select className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}>
-              <option>SBUS</option>
-              <option>PPM</option>
-              <option>CRSF (Crossfire)</option>
-              <option>DSM2/DSMX</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs uppercase block mb-1" style={{ color: colors.text }}>RSSI Channel</label>
-            <select className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: colors.hover, color: colors.textPrimary, border: `1px solid ${colors.border}` }}>
-              <option>Disabled</option>
-              <option>Channel 8</option>
-              <option>Channel 9</option>
-              <option>Channel 10</option>
-            </select>
-          </div>
-        </div>
-        <button
-          className="mt-4 w-full px-4 py-3 rounded-lg text-sm font-medium"
-          style={{ backgroundColor: colors.accent + '20', color: colors.accent }}
-        >
-          Start RC Calibration
-        </button>
       </div>
     </div>
   );
@@ -529,8 +417,8 @@ export function ConfigureView({ theme }: ConfigureViewProps) {
       case 'summary': return renderSummary();
       case 'airframe': return renderAirframe();
       case 'sensors': return renderSensors();
-      case 'radio': return renderRadio();
-      case 'flight-modes': return renderFlightModes();
+      case 'radio': return <RadioCalibration theme={theme} />;
+      case 'flight-modes': return <FlightModesConfig theme={theme} />;
       case 'safety': return <SafetyConfig theme={theme} />;
       case 'power': return renderPower();
       case 'motors': return <MotorTest theme={theme} vehicleType="quad" />;

@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Polyline, Polygon, useMapEvents, ZoomC
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Theme } from '@/types';
-import { GeofenceEditor, SurveyPatternEditor, RallyPointsEditor, TerrainProfile, type RallyPoint } from '@/components/mission';
+import { GeofenceEditor, SurveyPatternEditor, RallyPointsEditor, TerrainProfile, MissionImportExport, type RallyPoint } from '@/components/mission';
 
 // Geofence types
 interface GeofenceZone {
@@ -309,17 +309,18 @@ export function PlanView({ theme }: PlanViewProps) {
             ))}
           </div>
           <div className="flex gap-2">
+            <MissionImportExport
+              theme={theme}
+              missionItems={missionItems}
+              onImport={(items) => setMissionItems(items)}
+              missionName="Mission Alpha"
+              homePosition={{ lat: homePosition.lat, lng: homePosition.lng, altitude: 0 }}
+            />
             <button
               className="flex-1 px-3 py-2 rounded-lg text-xs font-medium"
               style={{ backgroundColor: colors.hover, color: colors.textPrimary }}
             >
               📤 Upload
-            </button>
-            <button
-              className="flex-1 px-3 py-2 rounded-lg text-xs font-medium"
-              style={{ backgroundColor: colors.hover, color: colors.textPrimary }}
-            >
-              📥 Download
             </button>
           </div>
         </div>

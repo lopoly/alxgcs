@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { Theme } from '@/types';
-import { GraphBuilder } from '@/components/analyze';
+import { GraphBuilder, ReportGenerator } from '@/components/analyze';
 
 type AnalyzeTab = 'replay' | 'graphs' | '3d';
 
@@ -341,13 +341,9 @@ export function AnalyzeView({ theme }: AnalyzeViewProps) {
                   </p>
                 </div>
                 <div className="flex gap-2">
+                  <ReportGenerator theme={theme} />
                   <button
-                    className="px-4 py-2 rounded-lg text-sm font-medium"
-                    style={{ backgroundColor: colors.hover, color: colors.textPrimary }}
-                  >
-                    📄 Report
-                  </button>
-                  <button
+                    onClick={() => setActiveTab('3d')}
                     className="px-4 py-2 rounded-lg text-sm font-medium"
                     style={{ backgroundColor: colors.hover, color: colors.textPrimary }}
                   >
