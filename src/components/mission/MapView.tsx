@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo, useState } from 'react';
-import { MapContainer, Polyline, Marker, useMap, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, useMap, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Theme } from '@/types';
@@ -122,37 +122,10 @@ function MapFollower({ position, shouldFollow }: { position: [number, number]; s
   return null;
 }
 
-// Dynamic tile layer component that updates when map type changes
-function DynamicTileLayer({ mapType, theme }: { mapType: MapType; theme: Theme }) {
-  const map = useMap();
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
-
-  useEffect(() => {
-    // Remove existing tile layer
-    if (tileLayerRef.current) {
-      map.removeLayer(tileLayerRef.current);
-    }
-
-    // Get tile configuration based on theme
-    const tiles = theme === 'dark' ? DARK_MAP_TILES : MAP_TILES;
-    const tileConfig = tiles[mapType];
-
-    // Create and add new tile layer
-    tileLayerRef.current = L.tileLayer(tileConfig.url, {
-      attribution: tileConfig.attribution,
-      maxZoom: tileConfig.maxZoom || 19,
-    });
-
-    tileLayerRef.current.addTo(map);
-
-    return () => {
-      if (tileLayerRef.current) {
-        map.removeLayer(tileLayerRef.current);
-      }
-    };
-  }, [map, mapType, theme]);
-
-  return null;
+// Get tile configuration based on theme and map type
+function getTileConfig(mapType: MapType, theme: Theme) {
+  const tiles = theme === 'dark' ? DARK_MAP_TILES : MAP_TILES;
+  return tiles[mapType];
 }
 
 // Generate realistic waypoints around a center point
@@ -234,6 +207,9 @@ export function MapView({
     { type: 'terrain', label: 'Terrain', icon: '⛰️' },
   ];
 
+  // Get current tile configuration
+  const tileConfig = getTileConfig(mapType, theme);
+
   return (
     <div className="relative w-full h-full">
       <MapContainer
@@ -244,8 +220,13 @@ export function MapView({
         attributionControl={false}
         style={{ background: theme === 'dark' ? '#0d1117' : '#e8f4f8' }}
       >
-        {/* Dynamic tile layer */}
-        <DynamicTileLayer mapType={mapType} theme={theme} />
+        {/* Tile layer with key to force re-render on change */}
+        <TileLayer
+          key={`${mapType}-${theme}`}
+          url={tileConfig.url}
+          attribution={tileConfig.attribution}
+          maxZoom={tileConfig.maxZoom || 19}
+        />
         <ZoomControl position="bottomright" />
 
         {/* Map follower */}
