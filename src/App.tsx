@@ -4,7 +4,8 @@ import { useViewStore } from '@/stores/useViewStore';
 import { useCommandStore } from '@/stores/useCommandStore';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { useKeyboardShortcuts, type FlightCommand } from '@/hooks/useKeyboardShortcuts';
-import { FlightView, PlanView, ConfigureView, AnalyzeView } from '@/views';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FlightView, PlanView, ConfigureView, AnalyzeView, SettingsView } from '@/views';
 import { CommandDialog, VehicleSelector, KeyboardShortcutsHelp, ConnectionManager, NotificationToast, CommandPalette, type SelectorVehicle } from '@/components/common';
 import type { ViewType, Link, LinkType } from '@/types';
 
@@ -13,6 +14,7 @@ const navItems: { id: ViewType; label: string; icon: string; shortcut: string }[
   { id: 'plan', label: 'Plan', icon: '🗺️', shortcut: 'F2' },
   { id: 'configure', label: 'Configure', icon: '⚙️', shortcut: 'F3' },
   { id: 'analyze', label: 'Analyze', icon: '📊', shortcut: 'F4' },
+  { id: 'settings', label: 'Settings', icon: '🔧', shortcut: 'F5' },
 ];
 
 // Mock vehicles for demonstration
@@ -204,12 +206,14 @@ export default function App() {
   const { currentView, setView } = useViewStore();
   const { pendingCommand, setPendingCommand, confirmCommand, cancelCommand, isArmed } = useCommandStore();
   const telemetry = useTelemetry();
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   // State
   const [selectedVehicle, setSelectedVehicle] = useState<SelectorVehicle | null>(mockVehicles[0]);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showConnectionManager, setShowConnectionManager] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [hideNavInFullscreen] = useState(true);
   const [connections, setConnections] = useState<Link[]>([
     // Mock connection for demonstration
     {
@@ -282,12 +286,8 @@ export default function App() {
 
   // Handle fullscreen toggle
   const handleFullscreen = useCallback(() => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      document.documentElement.requestFullscreen();
-    }
-  }, []);
+    toggleFullscreen();
+  }, [toggleFullscreen]);
 
   // Use keyboard shortcuts hook
   useKeyboardShortcuts({
@@ -351,6 +351,12 @@ export default function App() {
       } else if (e.key === 'F4') {
         e.preventDefault();
         setView('analyze');
+      } else if (e.key === 'F5') {
+        e.preventDefault();
+        setView('settings');
+      } else if (e.key === 'F11') {
+        e.preventDefault();
+        toggleFullscreen();
       }
       // Tab to cycle views
       else if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
@@ -370,7 +376,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentView, setView, showHelpModal, showCommandPalette, pendingCommand]);
+  }, [currentView, setView, showHelpModal, showCommandPalette, pendingCommand, toggleFullscreen]);
 
   const colors =
     theme === 'dark'
@@ -387,6 +393,8 @@ export default function App() {
         return <ConfigureView theme={theme} />;
       case 'analyze':
         return <AnalyzeView theme={theme} />;
+      case 'settings':
+        return <SettingsView theme={theme} onThemeChange={toggleTheme} />;
       default:
         return <FlightView telemetry={telemetry} theme={theme} onThemeToggle={toggleTheme} />;
     }
@@ -394,16 +402,33 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col" style={{ backgroundColor: colors.bg }}>
-      <Navigation
-        selectedVehicle={selectedVehicle}
-        onVehicleSelect={setSelectedVehicle}
-        onShowHelp={() => setShowHelpModal(true)}
-        onShowConnections={() => setShowConnectionManager(true)}
-        connectionCount={connections.filter((c) => c.connected).length}
-        isArmed={isArmed}
-        onThemeToggle={toggleTheme}
-      />
+      {/* Navigation - hidden in fullscreen if enabled */}
+      {!(isFullscreen && hideNavInFullscreen) && (
+        <Navigation
+          selectedVehicle={selectedVehicle}
+          onVehicleSelect={setSelectedVehicle}
+          onShowHelp={() => setShowHelpModal(true)}
+          onShowConnections={() => setShowConnectionManager(true)}
+          connectionCount={connections.filter((c) => c.connected).length}
+          isArmed={isArmed}
+          onThemeToggle={toggleTheme}
+        />
+      )}
       <div className="flex-1 overflow-hidden">{renderView()}</div>
+
+      {/* Fullscreen exit hint */}
+      {isFullscreen && (
+        <div
+          className="fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm z-50 transition-opacity duration-300"
+          style={{
+            backgroundColor: theme === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+            color: theme === 'dark' ? '#ffffff' : '#1e293b',
+            border: `1px solid ${theme === 'dark' ? '#1a2332' : '#e2e8f0'}`,
+          }}
+        >
+          Press <span className="font-mono px-1 py-0.5 rounded" style={{ backgroundColor: theme === 'dark' ? '#1a2332' : '#e2e8f0' }}>F11</span> or <span className="font-mono px-1 py-0.5 rounded" style={{ backgroundColor: theme === 'dark' ? '#1a2332' : '#e2e8f0' }}>Esc</span> to exit fullscreen
+        </div>
+      )}
 
       {/* Command Confirmation Dialog */}
       <CommandDialog

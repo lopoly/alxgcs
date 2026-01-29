@@ -167,7 +167,7 @@ export interface SystemHealth {
 }
 
 // View types
-export type ViewType = 'flight' | 'plan' | 'configure' | 'analyze' | 'admin';
+export type ViewType = 'flight' | 'plan' | 'configure' | 'analyze' | 'settings' | 'admin';
 
 // Component props
 export interface ThemeProps {
