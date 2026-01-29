@@ -1,9 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useViewStore } from '@/stores/useViewStore';
+import { useCommandStore } from '@/stores/useCommandStore';
 import { useTelemetry } from '@/hooks/useTelemetry';
+import { useKeyboardShortcuts, type FlightCommand } from '@/hooks/useKeyboardShortcuts';
 import { FlightView, PlanView, ConfigureView, AnalyzeView } from '@/views';
-import type { ViewType } from '@/types';
+import { CommandDialog, VehicleSelector, KeyboardShortcutsHelp, ConnectionManager, type SelectorVehicle } from '@/components/common';
+import type { ViewType, Link, LinkType } from '@/types';
 
 const navItems: { id: ViewType; label: string; icon: string; shortcut: string }[] = [
   { id: 'flight', label: 'Flight', icon: '✈️', shortcut: 'F1' },
@@ -12,7 +15,46 @@ const navItems: { id: ViewType; label: string; icon: string; shortcut: string }[
   { id: 'analyze', label: 'Analyze', icon: '📊', shortcut: 'F4' },
 ];
 
-function Navigation() {
+// Mock vehicles for demonstration
+const mockVehicles: SelectorVehicle[] = [
+  {
+    id: 'uav-001',
+    name: 'Survey Drone Alpha',
+    type: 'quadcopter',
+    connectionStatus: 'connected',
+    batteryPercent: 78,
+    signalStrength: 92,
+    lastSeen: Date.now(),
+  },
+  {
+    id: 'uav-002',
+    name: 'Inspection UAV Beta',
+    type: 'hexacopter',
+    connectionStatus: 'connected',
+    batteryPercent: 45,
+    signalStrength: 85,
+    lastSeen: Date.now(),
+  },
+  {
+    id: 'uav-003',
+    name: 'Fixed Wing Gamma',
+    type: 'fixed-wing',
+    connectionStatus: 'disconnected',
+    batteryPercent: 100,
+    signalStrength: 0,
+    lastSeen: Date.now() - 300000,
+  },
+];
+
+interface NavigationProps {
+  selectedVehicle: SelectorVehicle | null;
+  onVehicleSelect: (vehicle: SelectorVehicle) => void;
+  onShowHelp: () => void;
+  onShowConnections: () => void;
+  connectionCount: number;
+}
+
+function Navigation({ selectedVehicle, onVehicleSelect, onShowHelp, onShowConnections, connectionCount }: NavigationProps) {
   const { theme } = useThemeStore();
   const { currentView, setView } = useViewStore();
 
@@ -35,33 +77,85 @@ function Navigation() {
 
   return (
     <nav
-      className="flex items-center justify-center gap-1 px-4 py-1 border-b"
+      className="flex items-center justify-between px-4 py-1 border-b"
       style={{ backgroundColor: colors.bg, borderColor: colors.border }}
     >
-      {navItems.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => setView(item.id)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all cursor-pointer"
-          style={{
-            backgroundColor: currentView === item.id ? colors.accent + '20' : 'transparent',
-            borderBottom: currentView === item.id ? `2px solid ${colors.accent}` : '2px solid transparent',
-            color: currentView === item.id ? colors.textActive : colors.text,
-          }}
-        >
-          <span>{item.icon}</span>
-          <span className="font-medium text-sm">{item.label}</span>
-          <span
-            className="text-xs px-1.5 py-0.5 rounded"
+      {/* Vehicle Selector */}
+      <div className="w-64">
+        <VehicleSelector
+          theme={theme}
+          vehicles={mockVehicles}
+          selectedVehicle={selectedVehicle}
+          onSelect={onVehicleSelect}
+        />
+      </div>
+
+      {/* Navigation Items */}
+      <div className="flex items-center gap-1">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setView(item.id)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all cursor-pointer"
             style={{
-              backgroundColor: theme === 'dark' ? '#1a2332' : '#e2e8f0',
-              color: colors.text,
+              backgroundColor: currentView === item.id ? colors.accent + '20' : 'transparent',
+              borderBottom: currentView === item.id ? `2px solid ${colors.accent}` : '2px solid transparent',
+              color: currentView === item.id ? colors.textActive : colors.text,
             }}
           >
-            {item.shortcut}
-          </span>
+            <span>{item.icon}</span>
+            <span className="font-medium text-sm">{item.label}</span>
+            <span
+              className="text-xs px-1.5 py-0.5 rounded"
+              style={{
+                backgroundColor: theme === 'dark' ? '#1a2332' : '#e2e8f0',
+                color: colors.text,
+              }}
+            >
+              {item.shortcut}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Right side buttons */}
+      <div className="w-64 flex justify-end gap-2">
+        {/* Connections Button */}
+        <button
+          onClick={onShowConnections}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors"
+          style={{
+            backgroundColor: theme === 'dark' ? '#1a2332' : '#e2e8f0',
+            color: colors.text,
+          }}
+          title="Manage Connections"
+        >
+          <span>📡</span>
+          <span className="text-sm">Links</span>
+          {connectionCount > 0 && (
+            <span
+              className="px-1.5 py-0.5 rounded-full text-xs font-medium"
+              style={{ backgroundColor: colors.accent, color: '#000000' }}
+            >
+              {connectionCount}
+            </span>
+          )}
         </button>
-      ))}
+
+        {/* Help Button */}
+        <button
+          onClick={onShowHelp}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors"
+          style={{
+            backgroundColor: theme === 'dark' ? '#1a2332' : '#e2e8f0',
+            color: colors.text,
+          }}
+          title="Keyboard Shortcuts (?)"
+        >
+          <span>⌨️</span>
+          <span className="text-sm">Shortcuts</span>
+        </button>
+      </div>
     </nav>
   );
 }
@@ -69,7 +163,100 @@ function Navigation() {
 export default function App() {
   const { theme, toggleTheme } = useThemeStore();
   const { currentView, setView } = useViewStore();
+  const { pendingCommand, setPendingCommand, confirmCommand, cancelCommand, isArmed } = useCommandStore();
   const telemetry = useTelemetry();
+
+  // State
+  const [selectedVehicle, setSelectedVehicle] = useState<SelectorVehicle | null>(mockVehicles[0]);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showConnectionManager, setShowConnectionManager] = useState(false);
+  const [connections, setConnections] = useState<Link[]>([
+    // Mock connection for demonstration
+    {
+      id: 'link-1',
+      name: 'USB Serial',
+      linkType: { type: 'Serial', port: '/dev/ttyUSB0', baud: 57600 },
+      connected: true,
+      stats: {
+        bytesSent: 245760,
+        bytesReceived: 1048576,
+        packetLossPercent: 0.5,
+        latencyMs: 12,
+      },
+    },
+  ]);
+
+  // Handle connection management
+  const handleConnect = useCallback((linkType: LinkType) => {
+    let linkName: string;
+    if (linkType.type === 'Serial') {
+      linkName = `Serial ${linkType.port}`;
+    } else if (linkType.type === 'UdpClient') {
+      linkName = `UDP Client ${linkType.host}:${linkType.port}`;
+    } else if (linkType.type === 'UdpServer') {
+      linkName = `UDP Server ${linkType.bind}:${linkType.port}`;
+    } else if (linkType.type === 'TcpClient') {
+      linkName = `TCP ${linkType.host}:${linkType.port}`;
+    } else {
+      linkName = `Bluetooth ${linkType.address}`;
+    }
+
+    const newLink: Link = {
+      id: `link-${Date.now()}`,
+      name: linkName,
+      linkType,
+      connected: true,
+      stats: {
+        bytesSent: 0,
+        bytesReceived: 0,
+        packetLossPercent: 0,
+        latencyMs: 0,
+      },
+    };
+    setConnections((prev) => [...prev, newLink]);
+    setShowConnectionManager(false);
+  }, []);
+
+  const handleDisconnect = useCallback((linkId: string) => {
+    setConnections((prev) => prev.filter((link) => link.id !== linkId));
+  }, []);
+
+  // Handle flight commands from keyboard shortcuts
+  const handleFlightCommand = useCallback((command: FlightCommand) => {
+    // Show confirmation dialog for the command
+    setPendingCommand(command);
+  }, [setPendingCommand]);
+
+  // Handle vehicle selection from keyboard (1-9 keys)
+  const handleVehicleSelect = useCallback((index: number) => {
+    if (index >= 0 && index < mockVehicles.length) {
+      setSelectedVehicle(mockVehicles[index]);
+    }
+  }, []);
+
+  // Handle zoom
+  const handleZoom = useCallback((direction: 'in' | 'out') => {
+    // This would integrate with the map view
+    console.log('Zoom:', direction);
+  }, []);
+
+  // Handle fullscreen toggle
+  const handleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen();
+    }
+  }, []);
+
+  // Use keyboard shortcuts hook
+  useKeyboardShortcuts({
+    onFlightCommand: handleFlightCommand,
+    onVehicleSelect: handleVehicleSelect,
+    onZoom: handleZoom,
+    onFullscreen: handleFullscreen,
+    enabled: currentView === 'flight' && !pendingCommand && !showHelpModal,
+  });
 
   // Apply theme class to document
   useEffect(() => {
@@ -77,9 +264,26 @@ export default function App() {
     document.documentElement.classList.add(theme);
   }, [theme]);
 
-  // Keyboard shortcuts
+  // View switching and help modal keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Help modal toggle
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        setShowHelpModal((prev) => !prev);
+        return;
+      }
+
+      // Escape to close help modal
+      if (e.key === 'Escape' && showHelpModal) {
+        e.preventDefault();
+        setShowHelpModal(false);
+        return;
+      }
+
+      // Don't process view shortcuts if modal is open
+      if (showHelpModal || pendingCommand) return;
+
       // Function keys for view switching
       if (e.key === 'F1') {
         e.preventDefault();
@@ -112,7 +316,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentView, setView]);
+  }, [currentView, setView, showHelpModal, pendingCommand]);
 
   const colors =
     theme === 'dark'
@@ -134,20 +338,42 @@ export default function App() {
     }
   };
 
-  // Flight view has its own header, others use shared navigation
-  if (currentView === 'flight') {
-    return (
-      <div className="h-screen flex flex-col" style={{ backgroundColor: colors.bg }}>
-        <Navigation />
-        <div className="flex-1 overflow-hidden">{renderView()}</div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-screen flex flex-col" style={{ backgroundColor: colors.bg }}>
-      <Navigation />
+      <Navigation
+        selectedVehicle={selectedVehicle}
+        onVehicleSelect={setSelectedVehicle}
+        onShowHelp={() => setShowHelpModal(true)}
+        onShowConnections={() => setShowConnectionManager(true)}
+        connectionCount={connections.filter((c) => c.connected).length}
+      />
       <div className="flex-1 overflow-hidden">{renderView()}</div>
+
+      {/* Command Confirmation Dialog */}
+      <CommandDialog
+        theme={theme}
+        command={pendingCommand?.command ?? null}
+        isArmed={isArmed}
+        onConfirm={confirmCommand}
+        onCancel={cancelCommand}
+      />
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <KeyboardShortcutsHelp
+        theme={theme}
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
+
+      {/* Connection Manager Modal */}
+      <ConnectionManager
+        theme={theme}
+        isOpen={showConnectionManager}
+        onClose={() => setShowConnectionManager(false)}
+        connections={connections}
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
+      />
     </div>
   );
 }
