@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark theme (Field) - default */
+    --color-bg-primary: #030508;
+    --color-bg-secondary: #0a0f14;
+    --color-bg-tertiary: #0d1117;
+    --color-border: #1a2332;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #8899aa;
+    --color-text-muted: #667788;
+    --color-accent: #00d4ff;
+    --color-success: #00ff88;
+    --color-warning: #ffaa00;
+    --color-error: #ff4466;
+  }
+
+  .light {
+    --color-bg-primary: #f0f4f8;
+    --color-bg-secondary: #ffffff;
+    --color-bg-tertiary: #f8fafc;
+    --color-border: #e2e8f0;
+    --color-text-primary: #1e293b;
+    --color-text-secondary: #64748b;
+    --color-text-muted: #94a3b8;
+    --color-accent: #0066cc;
+    --color-success: #16a34a;
+    --color-warning: #d97706;
+    --color-error: #dc2626;
+  }
+}
+
+@layer components {
+  .gcs-panel {
+    @apply bg-dark-secondary border border-dark-border rounded-lg backdrop-blur-sm;
+  }
+
+  .light .gcs-panel {
+    @apply bg-light-secondary border-light-border;
+  }
+
+  .gcs-card {
+    @apply px-3 py-2 rounded-lg backdrop-blur-sm border;
+    background-color: rgba(10, 15, 20, 0.9);
+    border-color: var(--color-border);
+  }
+
+  .light .gcs-card {
+    background-color: rgba(255, 255, 255, 0.95);
+  }
+
+  .gcs-button {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer;
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+
+  .gcs-button:hover {
+    background-color: var(--color-border);
+  }
+
+  .gcs-badge {
+    @apply px-3 py-1.5 rounded-lg font-bold tracking-wider text-sm border;
+  }
+
+  .gcs-divider {
+    @apply h-px w-full;
+    background-color: var(--color-border);
+  }
+
+  .gcs-label {
+    @apply text-xs uppercase tracking-wider;
+    color: var(--color-text-secondary);
+  }
+
+  .gcs-value {
+    @apply text-lg font-semibold;
+    color: var(--color-text-primary);
+  }
+
+  .gcs-unit {
+    @apply text-xs;
+    color: var(--color-text-muted);
+  }
+}
+
+@layer utilities {
+  .font-mono-display {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .text-accent {
+    color: var(--color-accent);
+  }
+
+  .text-success {
+    color: var(--color-success);
+  }
+
+  .text-warning {
+    color: var(--color-warning);
+  }
+
+  .text-error {
+    color: var(--color-error);
+  }
+
+  .bg-accent {
+    background-color: var(--color-accent);
+  }
+
+  .border-accent {
+    border-color: var(--color-accent);
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 3px;
+  }
+}
