@@ -5,7 +5,7 @@ import { useCommandStore } from '@/stores/useCommandStore';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { useKeyboardShortcuts, type FlightCommand } from '@/hooks/useKeyboardShortcuts';
 import { FlightView, PlanView, ConfigureView, AnalyzeView } from '@/views';
-import { CommandDialog, VehicleSelector, KeyboardShortcutsHelp, ConnectionManager, type SelectorVehicle } from '@/components/common';
+import { CommandDialog, VehicleSelector, KeyboardShortcutsHelp, ConnectionManager, NotificationToast, type SelectorVehicle } from '@/components/common';
 import type { ViewType, Link, LinkType } from '@/types';
 
 const navItems: { id: ViewType; label: string; icon: string; shortcut: string }[] = [
@@ -374,6 +374,9 @@ export default function App() {
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
       />
+
+      {/* Notification Toasts */}
+      <NotificationToast theme={theme} />
     </div>
   );
 }
