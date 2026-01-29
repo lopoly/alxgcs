@@ -7,3 +7,4 @@ export { VehicleSelector, type SelectorVehicle } from './VehicleSelector';
 export { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 export { ConnectionManager } from './ConnectionManager';
 export { NotificationToast, NotificationCenter } from './NotificationToast';
+export { CommandPalette } from './CommandPalette';

@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Polyline, Polygon, useMapEvents, ZoomC
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Theme } from '@/types';
-import { GeofenceEditor, SurveyPatternEditor, RallyPointsEditor, type RallyPoint } from '@/components/mission';
+import { GeofenceEditor, SurveyPatternEditor, RallyPointsEditor, TerrainProfile, type RallyPoint } from '@/components/mission';
 
 // Geofence types
 interface GeofenceZone {
@@ -562,6 +562,22 @@ export function PlanView({ theme }: PlanViewProps) {
             <div style={{ color: colors.text, fontSize: '10px' }}>MAX ALT</div>
             <div style={{ color: colors.textPrimary, fontSize: '14px', fontWeight: 600 }}>{missionStats.maxAlt} m</div>
           </div>
+        </div>
+
+        {/* Terrain Profile */}
+        <div
+          className="absolute bottom-4 right-3 z-[1000]"
+          style={{ width: '400px' }}
+        >
+          <TerrainProfile
+            waypoints={waypointsWithCoords.map(wp => ({
+              lat: wp.lat!,
+              lng: wp.lng!,
+              altitude: wp.altitude,
+            }))}
+            theme={theme}
+            height={100}
+          />
         </div>
       </div>
 

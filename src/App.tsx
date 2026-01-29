@@ -5,7 +5,7 @@ import { useCommandStore } from '@/stores/useCommandStore';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { useKeyboardShortcuts, type FlightCommand } from '@/hooks/useKeyboardShortcuts';
 import { FlightView, PlanView, ConfigureView, AnalyzeView } from '@/views';
-import { CommandDialog, VehicleSelector, KeyboardShortcutsHelp, ConnectionManager, NotificationToast, type SelectorVehicle } from '@/components/common';
+import { CommandDialog, VehicleSelector, KeyboardShortcutsHelp, ConnectionManager, NotificationToast, CommandPalette, type SelectorVehicle } from '@/components/common';
 import type { ViewType, Link, LinkType } from '@/types';
 
 const navItems: { id: ViewType; label: string; icon: string; shortcut: string }[] = [
@@ -209,6 +209,7 @@ export default function App() {
   const [selectedVehicle, setSelectedVehicle] = useState<SelectorVehicle | null>(mockVehicles[0]);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showConnectionManager, setShowConnectionManager] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [connections, setConnections] = useState<Link[]>([
     // Mock connection for demonstration
     {
@@ -306,6 +307,13 @@ export default function App() {
   // View switching and help modal keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Command palette toggle (Cmd+K / Ctrl+K)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette((prev) => !prev);
+        return;
+      }
+
       // Help modal toggle
       if (e.key === '?' || (e.shiftKey && e.key === '/')) {
         e.preventDefault();
@@ -313,15 +321,22 @@ export default function App() {
         return;
       }
 
-      // Escape to close help modal
-      if (e.key === 'Escape' && showHelpModal) {
-        e.preventDefault();
-        setShowHelpModal(false);
-        return;
+      // Escape to close modals
+      if (e.key === 'Escape') {
+        if (showCommandPalette) {
+          e.preventDefault();
+          setShowCommandPalette(false);
+          return;
+        }
+        if (showHelpModal) {
+          e.preventDefault();
+          setShowHelpModal(false);
+          return;
+        }
       }
 
       // Don't process view shortcuts if modal is open
-      if (showHelpModal || pendingCommand) return;
+      if (showHelpModal || pendingCommand || showCommandPalette) return;
 
       // Function keys for view switching
       if (e.key === 'F1') {
@@ -355,7 +370,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentView, setView, showHelpModal, pendingCommand]);
+  }, [currentView, setView, showHelpModal, showCommandPalette, pendingCommand]);
 
   const colors =
     theme === 'dark'
@@ -418,6 +433,15 @@ export default function App() {
 
       {/* Notification Toasts */}
       <NotificationToast theme={theme} />
+
+      {/* Command Palette */}
+      <CommandPalette
+        theme={theme}
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        onNavigate={setView}
+        onFlightCommand={(cmd) => setPendingCommand({ type: cmd as FlightCommand['type'] })}
+      />
     </div>
   );
 }

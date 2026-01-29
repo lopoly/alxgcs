@@ -97,6 +97,7 @@ export interface TelemetryData {
   flightTime: string;
   nextWaypoint: number;
   totalWaypoints: number;
+  distanceToWaypoint: number;
   windSpeed: number;
   windDir: number;
   temperature: number;

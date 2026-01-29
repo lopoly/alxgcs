@@ -4,3 +4,4 @@ export { VideoFeed } from './VideoFeed';
 export { GeofenceEditor } from './GeofenceEditor';
 export { SurveyPatternEditor } from './SurveyPatternEditor';
 export { RallyPointsEditor, type RallyPoint } from './RallyPointsEditor';
+export { TerrainProfile } from './TerrainProfile';

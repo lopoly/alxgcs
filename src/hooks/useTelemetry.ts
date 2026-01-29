@@ -28,6 +28,7 @@ const initialTelemetry: TelemetryData = {
   flightTime: '00:41:18',
   nextWaypoint: 7,
   totalWaypoints: 12,
+  distanceToWaypoint: 1420,
   windSpeed: 8,
   windDir: 245,
   temperature: -12,
@@ -49,6 +50,7 @@ export function useTelemetry(): TelemetryData {
         roll: (Math.random() - 0.5) * 5,
         current: 10 + Math.random() * 5,
         throttle: 40 + Math.random() * 20,
+        distanceToWaypoint: Math.max(0, prev.distanceToWaypoint - prev.speed * 0.1 / 3.6),
       }));
     }, 100);
 
