@@ -37,6 +37,9 @@ export function FlightView({ telemetry, theme, onThemeToggle }: FlightViewProps)
             theme={theme}
             waypoints={telemetry.totalWaypoints}
             currentWp={telemetry.nextWaypoint}
+            latitude={telemetry.latitude}
+            longitude={telemetry.longitude}
+            heading={telemetry.heading}
           />
           <MiniHUD telemetry={telemetry} theme={theme} />
 
